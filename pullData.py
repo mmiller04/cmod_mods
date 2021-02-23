@@ -225,7 +225,8 @@ def loadBrightEmiss(shotN,smoothT,shotDict,fileLoc):
 
 def loadBrightEmissWindow(shotN,shotDict):
 
-	
+	print('test')
+
 	tomoDict = tomo.tomoWindow(shotDict['ne']['tWindow'])
 
 
