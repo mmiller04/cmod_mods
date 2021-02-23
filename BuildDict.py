@@ -6,9 +6,9 @@ import LyaDictFunc as pde
 import matplotlib.pyplot as plt
 
 import sys
-sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools')
+#sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools')
 import ADAShelper as ADAS
-import gadata
+#import gadata
 
 
 
@@ -69,7 +69,8 @@ def modifyDict(dictList):
 
 def main():
 
-	ADASfile = ADAS.ADAS(1215.2)
+        ADASfile = ADAS.ADAS(1215.2)
+        #ADASfile = '/home/sciortino/Aurora/aurora/adas_data/adf15/pec12#h_pju#h0.dat'
 
 	
 	
@@ -91,23 +92,24 @@ def main():
 
 	# shotList = np.array([[183031,'P3000_REFSEP']])
 
-	shotList = np.array([[1070710003]])
+        shotList = np.array([[1070511002,'QUICKFITID']])
 
-	for i in range(len(shotList)):
+        for i in range(len(shotList)):
+            
+                cItem = np.array([shotList[i]])
+                print(cItem)
+                key = str(cItem[0,0])+'_'+cItem[0,1]
+                dDict = pde.shotDict(cItem,ADASfile)
+            
+            
+                #ec.tomoCheck(dDict)
+            
+            
+                pde.save_dict(dDict,'Dicts/'+key)
 
-		cItem = np.array([shotList[i]])
-		print(cItem)
-		key = str(cItem[0,0])+'_'+cItem[0,1]
-		dDict = pde.shotDict(cItem,ADASfile)
 
+        return 0
 
-		#ec.tomoCheck(dDict)
-
-
-		pde.save_dict(dDict,'Dicts/'+key)
-
-
-	return 0
 
 if __name__ == "__main__":
 

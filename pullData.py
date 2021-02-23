@@ -4,10 +4,10 @@ import numpy as np
 from scipy.stats.mstats import mquantiles
 
 import sys
-sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools')
-import efitAR as EFIT
-import gadata
-sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools/LLAMA_tomo')
+#sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools')
+#import efitAR as EFIT
+#import gadata
+#sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools/LLAMA_tomo')
 import LLAMA_tomography5_Window as tomo
 
 
@@ -16,7 +16,7 @@ from scipy import optimize
 import math
 
 import MDSplus as mds
-conn = mds.Connection('atlas.gat.com')
+conn = mds.Connection('alcdata.psfc.mit.edu:8000')
 
 
 def loadEFIT(shotN,dDict):
@@ -215,18 +215,17 @@ def loadBrightEmiss(shotN,smoothT,shotDict,fileLoc):
 
 	tomoDict     = np.load(   fileLoc+'LLAMA_'+str(int(shotN))+'.npz',allow_pickle=True)
 
+        for i, key in enumerate(tomoDict):
+                shotDict[key] = tomoDict[key]
 
-	for i, key in enumerate(tomoDict):
-		shotDict[key] = tomoDict[key]
-
-	shotDict['smoothT'] = smoothT
-	return shotDict
+        shotDict['smoothT'] = smoothT
+        return shotDict
 
 
 def loadBrightEmissWindow(shotN,shotDict):
 
-	
-	tomoDict = tomo.tomoWindow(shotDict['ne']['tWindow'])
+        tomoDict = tomo.tomoWindow(shotDict['ne']['tWindow'])
+        print(shotDict)
 
 
 	for i, key in enumerate(tomoDict):

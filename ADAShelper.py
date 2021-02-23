@@ -1,10 +1,10 @@
 
 import sys
-sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools/HTPD/atomAI')
+sys.path.append('/home/sciortino/atomAI')
 from utils import *
 from adas_atomic_rates import *
 
-sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools/Aurora')
+sys.path.append('/home/millerma/Aurora')
 import aurora  as au
 import numpy as np
 import scipy

@@ -7,9 +7,9 @@ import sys
 # sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools')
 
 import ADAShelper as ADAS
-import DEGAShelper as DEGAS
-import efitAR as EFIT
-import gadata
+#import DEGAShelper as DEGAS
+#import efitAR as EFIT
+#import gadata
 
 import scipy.interpolate as interpolate
 from scipy import optimize
