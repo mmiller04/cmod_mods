@@ -4,10 +4,10 @@ import numpy as np
 from scipy.stats.mstats import mquantiles
 
 import sys
-sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools')
-import efitAR as EFIT
-import gadata
-sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools/LLAMA_tomo')
+#sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools')
+#import efitAR as EFIT
+#import gadata
+#sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools/LLAMA_tomo')
 import LLAMA_tomography5_Window as tomo
 
 
@@ -16,7 +16,7 @@ from scipy import optimize
 import math
 
 import MDSplus as mds
-conn = mds.Connection('atlas.gat.com')
+conn = mds.Connection('alcdata.psfc.mit.edu:8000')
 
 
 def loadEFIT(shotN,dDict):
@@ -86,6 +86,7 @@ def loadShot(shotN, dDict, window = False, smoothT=10):
 
 
 def loadTTFit(shotN,filename,dDict):
+
 	shotN = int(shotN)
 
 
