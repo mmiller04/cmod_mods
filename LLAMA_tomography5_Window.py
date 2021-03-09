@@ -18,6 +18,8 @@ import argparse
 from  scipy.linalg import eigh, solve_banded
 from  scipy.interpolate import interp1d
 
+from omfit_classes.omfit_mds import OMFITmdsValue
+
 
 
 chanVar= np.asarray([ 0.00237986,  0.00450433,  0.0115627 ,  0.00488375,  0.00378624,\
@@ -201,33 +203,28 @@ class LLAMA_tomography():
                     -np.sqrt(np.maximum( self.R_grid[:-1]**2-R_virtual_grid[:,:,None]**2,0)))
         self.dL_back = np.sum(dL_back*weights_grid[:,:,None],0)  
         
-           
         
         
     def load_geometry(self):
                 
-        coord_path = '/fusion/projects/diagnostics/llama/coordinates/'
-        #coord_path = ''
+        node = OMFITmdsValue(server='CMOD',shot=self.shot,TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
         
-        
-        import h5py as h5
-        data=h5.File(coord_path+'Jan2020Coords.h5','r')
-        
-        
-        LFS_coords = np.array( data['Data_LFS']['rProfCoords']) 
-        LFS_weights = np.array( data['Data_LFS']['rProf']) 
+        # LFS_coords = np.array( data['Data_LFS']['rProfCoords']) 
+        # LFS_weights = np.array( data['Data_LFS']['rProf']) 
 
-        HFS_coords = np.array( data['Data_HFS']['rProfCoords']) 
-        HFS_weights = np.array( data['Data_HFS']['rProf']) 
+        # HFS_coords = np.array( data['Data_HFS']['rProfCoords']) 
+        # HFS_weights = np.array( data['Data_HFS']['rProf']) 
 
         #tangential rardius
-        lfs_r = np.hypot(LFS_coords[:,0], LFS_coords[:,1])/1e3 #m
-        hfs_r = np.hypot(HFS_coords[:,0], HFS_coords[:,1])/1e3 #m
-        lfs_z =  LFS_coords[:,2].mean(1)/1e3 #m
-        hfs_z =  HFS_coords[:,2].mean(1)/1e3 #m
+        # lfs_r = np.hypot(LFS_coords[:,0], LFS_coords[:,1])/1e3 #m
+        # hfs_r = np.hypot(HFS_coords[:,0], HFS_coords[:,1])/1e3 #m
+        # lfs_z =  LFS_coords[:,2].mean(1)/1e3 #m
+        # hfs_z =  HFS_coords[:,2].mean(1)/1e3 #m
 
-   
-        self.nch_hfs = len(hfs_r)
+        lfs_r = node.dim_of(0)
+        # lfs_z = z_midplane - 0.125
+
+        # self.nch_hfs = len(hfs_r)
         self.nch_lfs = len(lfs_r)
                 
         ## calculation 2019_11_01
@@ -236,49 +233,55 @@ class LLAMA_tomography():
         #LFScalf = 1./np.array([2.67382e-22,2.71539e-22,2.75228e-22,2.78458e-22,2.81242e-22,2.83593e-22,2.85523e-22,2.87049e-22,2.88183e-22,2.88941e-22,\
                             #2.88663e-22,2.87375e-22,2.85775e-22,2.83885e-22,2.81726e-22,2.79319e-22,2.76683e-22,2.7384e-22,2.70808e-22,2.67608e-22])
         
-        # revised 2020_05_05 #laggnerf
-        HFScalf = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/HFS_calibration.dat')[:,1]
-        LFScalf = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/LFS_calibration.dat')[:,1]
+        # # revised 2020_05_05 #laggnerf
+        # HFScalf = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/HFS_calibration.dat')[:,1]
+        # LFScalf = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/LFS_calibration.dat')[:,1]
         
-        HFScalfErr = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/HFS_calibration.dat')[:,2]
-        LFScalfErr = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/LFS_calibration.dat')[:,2]
+        # HFScalfErr = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/HFS_calibration.dat')[:,2]
+        # LFScalfErr = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/LFS_calibration.dat')[:,2]
         
-        self.calf = np.hstack((HFScalf,LFScalf))
-        self.calfErr = np.hstack((HFScalfErr,LFScalfErr))
+        # self.calf = np.hstack((HFScalf,LFScalf))
+        # self.calfErr = np.hstack((HFScalfErr,LFScalfErr))
 
         ##create response matrix
 
         ##account for  finite LOS width 
-        R_tg_virtual = np.vstack((hfs_r, lfs_r)).T
-        weight = np.vstack((HFS_weights, LFS_weights)).T
-        weight /= np.sum(weight,0)
+        # R_tg_virtual = np.vstack((hfs_r, lfs_r)).T
+        R_tg_virtual = lfs_r
+        # weight = np.vstack((HFS_weights, LFS_weights)).T
+        # weight /= np.sum(weight,0)
 
         #center of mass of the LOS
-        self.R_tg = np.average(R_tg_virtual,0,weight) 
-        self.Z_tg = np.hstack((hfs_z,lfs_z))
+        self.R_tg = R_tg_virtual
+        # self.R_tg = np.average(R_tg_virtual,0,weight) 
+        # self.Z_tg = np.hstack((hfs_z,lfs_z))
 
-        self.lfs_min = self.R_tg[self.nch_hfs:].min()
-        self.lfs_max = self.R_tg[self.nch_hfs:].max()
-        self.hfs_min = self.R_tg[:self.nch_hfs].min()
-        self.hfs_max = self.R_tg[:self.nch_hfs].max()
+        self.lfs_min = self.R_tg[0]
+        self.lfs_max = self.R_tg[-1]
+
+        # self.lfs_min = self.R_tg[self.nch_hfs:].min() # first r value
+        # self.lfs_max = self.R_tg[self.nch_hfs:].max() # last r value
+        # self.hfs_min = self.R_tg[:self.nch_hfs].min()
+        # self.hfs_max = self.R_tg[:self.nch_hfs].max()
         
         self.nr = 200
-        self.R_grid = np.hstack((np.linspace(self.hfs_min-.01,self.hfs_max+.05,self.nr),
-                                 np.linspace(self.lfs_min-.01,self.lfs_max+.02,self.nr)))
+        self.R_grid = np.linspace(self.hfs_min-.01,self.hfs_max+.05,self.nr)
+        # self.R_grid = np.hstack((np.linspace(self.hfs_min-.01,self.hfs_max+.05,self.nr),
+        #                          np.linspace(self.lfs_min-.01,self.lfs_max+.02,self.nr)))
         
-        dL = 2*(np.sqrt(np.maximum((self.R_grid[1:])**2-R_tg_virtual[:,:,None]**2,0))       
-               -np.sqrt(np.maximum( self.R_grid[:-1]**2-R_tg_virtual[:,:,None]**2,0)))
-        self.dL = np.sum(dL*weight[:,:,None],0)
+        dL = 2*(np.sqrt(np.maximum((self.R_grid[1:])**2-R_tg_virtual[:,None]**2,0))       
+               -np.sqrt(np.maximum( self.R_grid[:-1]**2-R_tg_virtual[:,None]**2,0)))
+        self.dL = np.sum(dL,0)
     
 
-        #add more LOS in between existing for a better plotting of the results
-        clipped_grid = np.clip(self.R_grid,self.R_tg.min(),self.R_tg.max())
-        weights_grid = interp1d(self.R_tg,weight)(clipped_grid) 
-        R_virtual_grid = interp1d(self.R_tg,R_tg_virtual,fill_value='extrapolate')(self.R_grid)
+        # #add more LOS in between existing for a better plotting of the results
+        # clipped_grid = np.clip(self.R_grid,self.eR_tg.min(),self.R_tg.max())
+        # weights_grid = interp1d(self.R_tg,weight)(clipped_grid) 
+        # R_virtual_grid = interp1d(self.R_tg,R_tg_virtual,fill_value='extrapolate')(self.R_grid)
 
-        dL_back = 2*(np.sqrt(np.maximum((self.R_grid[1:])**2-R_virtual_grid[:,:,None]**2,0))       
-                    -np.sqrt(np.maximum( self.R_grid[:-1]**2-R_virtual_grid[:,:,None]**2,0)))
-        self.dL_back = np.sum(dL_back*weights_grid[:,:,None],0)
+        # dL_back = 2*(np.sqrt(np.maximum((self.R_grid[1:])**2-R_virtual_grid[:,:,None]**2,0))       
+        #             -np.sqrt(np.maximum( self.R_grid[:-1]**2-R_virtual_grid[:,:,None]**2,0)))
+        # self.dL_back = np.sum(dL_back*weights_grid[:,:,None],0)
 
     #Simplest data load
     #smooths data for an entire shot
@@ -1538,14 +1541,12 @@ def batchRun():
 
         tomo.save(None)
 
-def tomoWindow(tWindows):
+def tomoWindow(subDict):
     #tWindows = np.asarray([[2826.344104,2932.67296143],[2857.94490723,2969.6394873],[ 180910,180910]])
 
     tAvr = 0.001
 
-    shot = tWindows[2,0]
-
-
+    shot = subDict['shotN']
 
     tomo = LLAMA_tomography(shot,time_avg=tAvr)
     tomo.load_geometry()
