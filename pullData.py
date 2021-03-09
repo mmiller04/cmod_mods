@@ -215,7 +215,7 @@ def loadBrightEmiss(shotN,smoothT,shotDict,fileLoc):
 	smoothTTxt = str(smoothT)+'msSmooth'
 
 	# tomoDict     = np.load(   fileLoc+'LLAMA_'+str(int(shotN))+'.npz',allow_pickle=True)
-	tomoDict = tomo.tomoReturn(shot)
+	tomoDict = tomo.tomoReturn(shotN)
 
 
 	for i, key in enumerate(tomoDict):
