@@ -204,7 +204,6 @@ class LLAMA_tomography():
         
         
     def load_geometry(self):
-        print(self.shot)
                 
         node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
         
@@ -239,6 +238,12 @@ class LLAMA_tomography():
         # HFScalfErr = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/HFS_calibration.dat')[:,2]
         # LFScalfErr = np.loadtxt('/fusion/projects/diagnostics/llama/Calibration/calFactors/2020_01/LFS_calibration.dat')[:,2]
         
+
+        ### ignore claibration for now
+
+        self.calf = np.ones(lfs_r.shape)
+        self.calfErr = np.ones(lfs_r.shape)
+
         # self.calf = np.hstack((HFScalf,LFScalf))
         # self.calfErr = np.hstack((HFScalfErr,LFScalfErr))
 
@@ -285,36 +290,41 @@ class LLAMA_tomography():
     #Simplest data load
     #smooths data for an entire shot
     def load_data(self):
-        
-        #fast fetch of the experimental data
-        mds_server = 'atlas.gat.com'
-        #mds_server = 'localhost'
+                # mds_server = 'alcdata.psfc.mit.edu:8000'
 
-        MDSconn = mds.Connection(mds_server )
+        # #mds_server = 'localhost'
 
-        PTNAME = 'PTDATA2("LYA1%s%.2dRAW",%d,1)'
-        n_los = 20 
-        
-        TDI  = [PTNAME%('H',n+1,self.shot) for n in range(n_los)]
-        TDI += [PTNAME%('L',n+1,self.shot) for n in range(n_los)]
-        TDI += ['dim_of(%s)'%TDI[-1]]
-        
-        raw = mds_par_load(mds_server,  TDI, 8)
-        tvec = raw.pop(-1)
+        # MDSconn = mds.Connection(mds_server)
 
+        # PTNAME = 'PTDATA2("LYA1%s%.2dRAW",%d,1)'
+        # n_los = 20 
         
-        raw_data = np.vstack(raw).T
+        # TDI  = [PTNAME%('H',n+1,self.shot) for n in range(n_los)]
+        # TDI += [PTNAME%('L',n+1,self.shot) for n in range(n_los)]
+        # TDI += ['dim_of(%s)'%TDI[-1]]
+        
+        # raw = mds_par_load(mds_server,  TDI, 8)
+        # tvec = raw.pop(-1)
+
+        node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
+        
+        # raw_data = np.vstack(raw).T
+        raw_data = node.data()
+
+        tvec = node.dim_of(1)
 
         offset = slice(0,tvec.searchsorted(0))
        
         dt = (tvec[-1]-tvec[0])/(len(tvec)-1)
+
         n_smooth = int(1000*self.time_avg/dt)
 
-        
+
         nt,nch = raw_data.shape
 
+        data_low = raw_data
+        tvec_low = tvec
 
-        #data seems to be lowpassed by 10kHz (0.1ms) filter
         
         nt = nt//n_smooth*n_smooth
 
@@ -322,7 +332,6 @@ class LLAMA_tomography():
 
         data_low = raw_data[:nt].reshape(-1,n_smooth, nch).mean(1)-raw_data[offset].mean(0)
 
-        
    
         #data = np.load('data.npz')
         #data_low = data['data_low']
@@ -671,10 +680,11 @@ class LLAMA_tomography():
     def load_data_Window(self,tWindows):
         
         #fast fetch of the experimental data
-        mds_server = 'atlas.gat.com'
+        mds_server = 'alcdata.psfc.mit.edu:8000'
+
         #mds_server = 'localhost'
 
-        MDSconn = mds.Connection(mds_server )
+        MDSconn = mds.Connection(mds_server)
 
         PTNAME = 'PTDATA2("LYA1%s%.2dRAW",%d,1)'
         n_los = 20 
@@ -1540,12 +1550,12 @@ def batchRun():
 
         tomo.save(None)
 
-def tomoWindow(subDict):
+def tomoWindow(tWindows):
     #tWindows = np.asarray([[2826.344104,2932.67296143],[2857.94490723,2969.6394873],[ 180910,180910]])
 
     tAvr = 0.001
 
-    shot = subDict['shotN']
+    shot = tWindows[2,0]
 
     tomo = LLAMA_tomography(shot,time_avg=tAvr)
     tomo.load_geometry()
