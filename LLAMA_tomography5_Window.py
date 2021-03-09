@@ -204,7 +204,7 @@ class LLAMA_tomography():
         
         
     def load_geometry(self):
-                
+        
         node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
         
         # LFS_coords = np.array( data['Data_LFS']['rProfCoords']) 
@@ -267,7 +267,7 @@ class LLAMA_tomography():
         # self.lfs_max = self.R_tg[self.nch_hfs:].max() # last r value
         # self.hfs_min = self.R_tg[:self.nch_hfs].min()
         # self.hfs_max = self.R_tg[:self.nch_hfs].max()
-        
+       
         self.nr = 200
         self.R_grid = np.linspace(self.lfs_min-.01,self.lfs_max+.05,self.nr)
         # self.R_grid = np.hstack((np.linspace(self.hfs_min-.01,self.hfs_max+.05,self.nr),
@@ -290,14 +290,12 @@ class LLAMA_tomography():
     #Simplest data load
     #smooths data for an entire shot
     def load_data(self):
-                # mds_server = 'alcdata.psfc.mit.edu:8000'
 
         # #mds_server = 'localhost'
 
         # MDSconn = mds.Connection(mds_server)
 
         # PTNAME = 'PTDATA2("LYA1%s%.2dRAW",%d,1)'
-        # n_los = 20 
         
         # TDI  = [PTNAME%('H',n+1,self.shot) for n in range(n_los)]
         # TDI += [PTNAME%('L',n+1,self.shot) for n in range(n_los)]
@@ -310,14 +308,14 @@ class LLAMA_tomography():
         
         # raw_data = np.vstack(raw).T
         raw_data = node.data()
+        n_los = len(raw_data[0])
 
         tvec = node.dim_of(1)
 
         offset = slice(0,tvec.searchsorted(0))
-       
         dt = (tvec[-1]-tvec[0])/(len(tvec)-1)
 
-        n_smooth = int(1000*self.time_avg/dt)
+        n_smooth = int(20*self.time_avg/dt)
 
 
         nt,nch = raw_data.shape
@@ -325,35 +323,36 @@ class LLAMA_tomography():
         data_low = raw_data
         tvec_low = tvec
 
-        
         nt = nt//n_smooth*n_smooth
-
+        
         tvec_low = tvec[:nt].reshape(-1,n_smooth).mean(1)
 
         data_low = raw_data[:nt].reshape(-1,n_smooth, nch).mean(1)-raw_data[offset].mean(0)
 
-   
         #data = np.load('data.npz')
         #data_low = data['data_low']
         #tvec_low = data['tvec_low']
 
-        #estimate noise from the signal before the plasma 
+        #estimate noise from the signal before the plasma
+        error_low1 = np.zeros_like(data_low)
+        error_low2 = np.std(data_low[tvec_low<0],0)
+        error_low21 = np.std(data_low[tvec_low<0],0)[None,:]
         error_low = np.zeros_like(data_low)+np.std(data_low[tvec_low<0],0)[None,:]/3
 
         #guess errorbarss from the variation between neighboring channels
-        ind1 = np.r_[1,0:n_los-1,n_los+1,  n_los:n_los*2-1]
-        ind2 = np.r_[  1:n_los  ,n_los-2,n_los+1:n_los*2  ,n_los*2-2]
-
+        #ind1 = np.r_[1,0:n_los-1,n_los+1,  n_los:n_los*2-1]
+        #ind2 = np.r_[  1:n_los  ,n_los-2,n_los+1:n_los*2  ,n_los*2-2]
+        ind1 = np.r_[1,0:n_los-1]
+        ind2 = np.r_[  1:n_los  ,n_los-2]
 
         #the ind1 and ind2, basically shift data_low up and down by one to find the average
         #value of the neighboring channels. That is then subtracting from the original array
         # to get the average difference from neighboring hcannels
-
+        
         #the difference between the followin neighbor is calculated and then the standard error
         #is calculated for each channel
         error_low += np.std(np.diff(data_low-(data_low[:,ind1]+data_low[:,ind2])/2,axis=0),axis=0)/np.sqrt(2)
 
-        
         #remove offset estimated from the edge most detector 
         offset_time = data_low[:,[-1]]
         data_low -= offset_time
@@ -370,10 +369,10 @@ class LLAMA_tomography():
         self.scale = np.median(self.data) #just a normalisation to aviod calculation with so huge exponents
         
         #BUG corrupted channel
-        self.err[ :,20+11] *= 10
-        self.data[:,20+11] *= 0.8
-        self.nt = len(self.tvec)
-        print(self.nt)
+        #self.err[ :,20+11] *= 10
+        #self.data[:,20+11] *= 0.8
+        #self.nt = len(self.tvec)
+        #print(self.nt)
 
     """breaks data into time from ELMS
     """
@@ -680,7 +679,7 @@ class LLAMA_tomography():
     def load_data_Window(self,tWindows):
         
         #fast fetch of the experimental data
-        mds_server = 'alcdata.psfc.mit.edu:8000'
+        mds_server = 'atlas.gat.com'
 
         #mds_server = 'localhost'
 
