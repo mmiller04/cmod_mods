@@ -20,8 +20,6 @@ from  scipy.interpolate import interp1d
 
 from omfit_classes.omfit_mds import OMFITmdsValue
 
-
-
 chanVar= np.asarray([ 0.00237986,  0.00450433,  0.0115627 ,  0.00488375,  0.00378624,\
 0.00514737,  0.00504275,  0.00584001,  0.00533578,  0.00558195,\
 0.00513933,  0.00541877,  0.0048475 ,  0.00506704,  0.00493994,\
@@ -206,8 +204,9 @@ class LLAMA_tomography():
         
         
     def load_geometry(self):
+        print(self.shot)
                 
-        node = OMFITmdsValue(server='CMOD',shot=self.shot,TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
+        node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
         
         # LFS_coords = np.array( data['Data_LFS']['rProfCoords']) 
         # LFS_weights = np.array( data['Data_LFS']['rProf']) 
@@ -265,7 +264,7 @@ class LLAMA_tomography():
         # self.hfs_max = self.R_tg[:self.nch_hfs].max()
         
         self.nr = 200
-        self.R_grid = np.linspace(self.hfs_min-.01,self.hfs_max+.05,self.nr)
+        self.R_grid = np.linspace(self.lfs_min-.01,self.lfs_max+.05,self.nr)
         # self.R_grid = np.hstack((np.linspace(self.hfs_min-.01,self.hfs_max+.05,self.nr),
         #                          np.linspace(self.lfs_min-.01,self.lfs_max+.02,self.nr)))
         
