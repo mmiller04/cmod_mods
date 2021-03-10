@@ -1173,9 +1173,9 @@ class LLAMA_tomography():
         self.y = np.zeros((self.nt, 2*self.nr-1))
         self.y_err = np.zeros((self.nt, 2*self.nr-1))
         self.chi2lfs = np.zeros(self.nt)
-        self.chi2hfs = np.zeros(self.nt)
+        # self.chi2hfs = np.zeros(self.nt)
         self.gamma_lfs = np.zeros(self.nt) 
-        self.gamma_hfs = np.zeros(self.nt) 
+        # self.gamma_hfs = np.zeros(self.nt) 
         self.backprojection = np.zeros_like(self.data)
 
         itime = np.arange(self.nt)
@@ -1191,100 +1191,104 @@ class LLAMA_tomography():
 
 
             #reconstruct both sides independently, just substract LFS contribution from HFS
-            for iside,side in enumerate(('LFS', 'HFS')): 
-                W = np.ones(self.nr-1)
+            # for iside,side in enumerate(('LFS', 'HFS')): 
+
+            iside = 0
+            side = 'LFS'
+
+            W = np.ones(self.nr-1)
 
                 
-                if side == 'LFS': 
-                    ind_los = slice(self.nch_hfs,self.nch_hfs+self.nch_lfs)
-                    ind_space = slice(self.nr,None)
-                    lfs_contribution = [0]
-                else:
-                    ind_los = slice(0,self.nch_hfs)
-                    ind_space = slice(0,self.nr-1)
-                    lfs_contribution = np.dot(T[ind_los],self.y[tind].T).T
+                # if side == 'LFS': 
+            ind_los = slice(0,self.nch_lfs)
+            ind_space = slice(self.nr,None)
+            lfs_contribution = [0]
+                # else:
+                #     ind_los = slice(0,self.nch_hfs)
+                #     ind_space = slice(0,self.nr-1)
+                #     lfs_contribution = np.dot(T[ind_los],self.y[tind].T).T
                 
-                Q = np.linspace(0,1,ind_los.stop-ind_los.start)
+            Q = np.linspace(0,1,ind_los.stop-ind_los.start)
 
     
     
-                for ifisher in range(nfisher):
-                    #multiply tridiagonal regularisation operator by a diagonal weight matrix W
-                    WD = np.copy(D)
-                    
-                    WD[0,1:]*=W[:-1]
-                    WD[1]*=W
-                    WD[2,:-1]*=W[1:]
-                    
-                    #transpose the band matrix 
-                    DTW = np.copy(WD) 
-                    DTW[0,1:],DTW[2,:-1] = WD[2,:-1],WD[0,1:]
-                    
-                    #####    solve Tikhonov regularization (optimised for speed)
-                    H = solve_banded((1,1),DTW,T[ind_los,ind_space].T, overwrite_ab=True,check_finite=False)
-                    #fast method to calculate U,S,V = svd(H.T) of rectangular matrix 
-                    LL = np.dot(H.T, H)
-                    S2,U = eigh(LL,overwrite_a=True, check_finite=False,lower=True)  
-                    S2 = np.maximum(S2,1) #singular values S can be negative due to numerical uncertainty 
-
-                    #K = dot(dot(U,diag(1/S)),V.T).T
-                    #print( 'Decomposition accuracy',linalg.norm(dot(T[ind_los,ind_space],K)-eye(len(S))))
-                    #substract LFS contribution, calculate projection                       
-
-                    mean_p = np.dot(mean_d[ind_los]-np.mean(lfs_contribution,0),U)
-                    
-                    #guess for regularisation - estimate quantile of log(S^2)
-                    g0 = np.interp(reg_level_guess[iside], Q, np.log(S2))
-
-                    if ifisher == nfisher -1:
-                        #last step - find optimal regularisation
-                        S = np.sqrt(S2)
-                        
-                        g0, log_fg2 = self.FindMin(self.GCV, g0 ,1,mean_p,S,U.T) #slowest step
-                        #avoid too small regularisation when min of GCV is not found
-                        
-                        gmin = np.interp(reg_level_min[iside], Q, np.log(S2))
-                        g0 = max(g0, gmin)
-                        
-                        #filtering factor
-                        w = 1./(1.+np.exp(g0)/S2)
-                        
-                        V = np.dot(H,U/S)  
-                        V = solve_banded((1,1),WD,V, overwrite_ab=True,overwrite_b=True,check_finite=False) 
-                    else:
-                        #filtering factor
-                        w = 1./(1.+np.exp(g0)/S2)
-                        
-                        #calculate y without evaluating V explicitly
-                        y = np.dot(H,np.dot(U/S2,w*mean_p))
-                        #final inversion of mean solution , reconstruction
-                        y = solve_banded((1,1),WD,y, overwrite_ab=True,overwrite_b=True,check_finite=False) 
-                        
-                        #plt.plot(y)
-                        #weight matrix for the next iteration
-                        W = 1/np.maximum(y,1e-10)**.5
+            for ifisher in range(nfisher):
+                #multiply tridiagonal regularisation operator by a diagonal weight matrix W
+                WD = np.copy(D)
                 
-                p = np.dot(d[:,ind_los]-lfs_contribution,U)
-                y = np.dot((w/S)*p,V.T)
-        
-                self.backprojection[tind,ind_los] = fit = np.dot(p*w,U.T)+lfs_contribution
-                chi2 = np.sum((d[:,ind_los]-fit)**2,1)/np.size(fit,1)
-                gamma = np.interp(g0,np.log(S2),Q)
-  
+                WD[0,1:]*=W[:-1]
+                WD[1]*=W
+                WD[2,:-1]*=W[1:]
                 
-                if side == 'LFS':
-                    self.chi2lfs[tind] = chi2
-                    self.gamma_lfs[tind] = gamma
+                #transpose the band matrix 
+                DTW = np.copy(WD) 
+                DTW[0,1:],DTW[2,:-1] = WD[2,:-1],WD[0,1:]
+                
+                #####    solve Tikhonov regularization (optimised for speed)
+                H = solve_banded((1,1),DTW,T[ind_los,ind_space].T, overwrite_ab=True,check_finite=False)
+                #fast method to calculate U,S,V = svd(H.T) of rectangular matrix 
+                LL = np.dot(H.T, H)
+                S2,U = eigh(LL,overwrite_a=True, check_finite=False,lower=True)  
+                S2 = np.maximum(S2,1) #singular values S can be negative due to numerical uncertainty 
+
+                #K = dot(dot(U,diag(1/S)),V.T).T
+                #print( 'Decomposition accuracy',linalg.norm(dot(T[ind_los,ind_space],K)-eye(len(S))))
+                #substract LFS contribution, calculate projection                       
+
+                mean_p = np.dot(mean_d[ind_los]-np.mean(lfs_contribution,0),U)
+                
+                #guess for regularisation - estimate quantile of log(S^2)
+                g0 = np.interp(reg_level_guess[iside], Q, np.log(S2))
+
+                if ifisher == nfisher -1:
+                    #last step - find optimal regularisation
+                    S = np.sqrt(S2)
+                    
+                    g0, log_fg2 = self.FindMin(self.GCV, g0 ,1,mean_p,S,U.T) #slowest step
+                    #avoid too small regularisation when min of GCV is not found
+                    
+                    gmin = np.interp(reg_level_min[iside], Q, np.log(S2))
+                    g0 = max(g0, gmin)
+                    
+                    #filtering factor
+                    w = 1./(1.+np.exp(g0)/S2)
+                    
+                    V = np.dot(H,U/S)  
+                    V = solve_banded((1,1),WD,V, overwrite_ab=True,overwrite_b=True,check_finite=False) 
                 else:
-                    self.chi2hfs[tind] = chi2
-                    self.gamma_hfs[tind] = gamma
-
-                self.y[tind,ind_space] = y
-                #correction for under/over estimated data uncertainty
-                self.y_err[tind,ind_space] = np.sqrt(np.dot(V**2,(w/S)**2))#*chi2[:,None])
+                    #filtering factor
+                    w = 1./(1.+np.exp(g0)/S2)
+                    
+                    #calculate y without evaluating V explicitly
+                    y = np.dot(H,np.dot(U/S2,w*mean_p))
+                    #final inversion of mean solution , reconstruction
+                    y = solve_banded((1,1),WD,y, overwrite_ab=True,overwrite_b=True,check_finite=False) 
+                    
+                    #plt.plot(y)
+                    #weight matrix for the next iteration
+                    W = 1/np.maximum(y,1e-10)**.5
+                
+            p = np.dot(d[:,ind_los]-lfs_contribution,U)
+            y = np.dot((w/S)*p,V.T)
+    
+            self.backprojection[tind,ind_los] = fit = np.dot(p*w,U.T)+lfs_contribution
+            chi2 = np.sum((d[:,ind_los]-fit)**2,1)/np.size(fit,1)
+            gamma = np.interp(g0,np.log(S2),Q)
 
             
-            self.backprojection[tind] *= self.err[tind].mean(0)
+            # if side == 'LFS':
+            self.chi2lfs[tind] = chi2
+            self.gamma_lfs[tind] = gamma
+            # else:
+            #     self.chi2hfs[tind] = chi2
+            #     self.gamma_hfs[tind] = gamma
+
+            self.y[tind,ind_space] = y
+            #correction for under/over estimated data uncertainty
+            self.y_err[tind,ind_space] = np.sqrt(np.dot(V**2,(w/S)**2))#*chi2[:,None])
+
+        
+        self.backprojection[tind] *= self.err[tind].mean(0)
             
             
         self.y *= self.scale
