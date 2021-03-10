@@ -371,7 +371,7 @@ class LLAMA_tomography():
         #BUG corrupted channel
         #self.err[ :,20+11] *= 10
         #self.data[:,20+11] *= 0.8
-        #self.nt = len(self.tvec)
+        self.nt = len(self.tvec)
         #print(self.nt)
 
     """breaks data into time from ELMS
