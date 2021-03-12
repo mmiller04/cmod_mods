@@ -220,6 +220,7 @@ class LLAMA_tomography():
         # hfs_z =  HFS_coords[:,2].mean(1)/1e3 #m
 
         lfs_r = node.dim_of(0)
+        lfs_r = np.flip(lfs_r) # stored as decreasing
         # lfs_z = z_midplane - 0.125
 
         # self.nch_hfs = len(hfs_r)
@@ -305,9 +306,11 @@ class LLAMA_tomography():
         # tvec = raw.pop(-1)
 
         node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
-        
+
         # raw_data = np.vstack(raw).T
         raw_data = node.data()
+        raw_data = np.flip(raw_data)
+
         n_los = len(raw_data[0])
 
         tvec = node.dim_of(1)
@@ -1154,7 +1157,7 @@ class LLAMA_tomography():
  
         return self.R_grid_b, self.y,self.y_err, self.backprojection
 
-    def calc_tomo(self, n_blocks = 100):
+    def calc_tomo(self, n_blocks = 10):
         #calculate tomography of data splitted in n_blocks using optimised minimum fisher regularisation
         #Odstrcil, T., et al. "Optimized tomography methods for plasma 
         #emissivity reconstruction at the ASDEX  Upgrade tokamak.
@@ -1170,8 +1173,8 @@ class LLAMA_tomography():
         D = self.regul_matrix(biased_edges=True)
         
         
-        self.y = np.zeros((self.nt, 2*self.nr-1))
-        self.y_err = np.zeros((self.nt, 2*self.nr-1))
+        self.y = np.zeros((self.nt, self.nr-1))
+        self.y_err = np.zeros((self.nt, self.nr-1))
         self.chi2lfs = np.zeros(self.nt)
         # self.chi2hfs = np.zeros(self.nt)
         self.gamma_lfs = np.zeros(self.nt) 
@@ -1181,14 +1184,20 @@ class LLAMA_tomography():
         itime = np.arange(self.nt)
         tinds = np.array_split(itime, n_blocks)
 
-
-        
         for ib, tind in enumerate(tinds):
+
+            ## cmod mod: see where the error is 0 and replace to avoid dividing by 0
+            mean_err_zero_inds = np.where(self.err[tind].mean(0) == 0)
+            err_zero_inds = np.where(self.err[tind] == 0)
 
             T = self.dL/self.err[tind].mean(0)[:,None]*self.scale
             mean_d = self.data[tind].mean(0)/self.err[tind].mean(0)
             d = self.data[tind]/self.err[tind]
-
+            
+            ## replace infinities and nans with 0
+            T[mean_err_zero_inds] = 0
+            mean_d[mean_err_zero_inds] = 0
+            d[err_zero_inds] = 0
 
             #reconstruct both sides independently, just substract LFS contribution from HFS
             # for iside,side in enumerate(('LFS', 'HFS')): 
@@ -1201,7 +1210,7 @@ class LLAMA_tomography():
                 
                 # if side == 'LFS': 
             ind_los = slice(0,self.nch_lfs)
-            ind_space = slice(self.nr,None)
+            ind_space = slice(0,self.nr-1)
             lfs_contribution = [0]
                 # else:
                 #     ind_los = slice(0,self.nch_hfs)
@@ -1223,7 +1232,7 @@ class LLAMA_tomography():
                 #transpose the band matrix 
                 DTW = np.copy(WD) 
                 DTW[0,1:],DTW[2,:-1] = WD[2,:-1],WD[0,1:]
-                
+
                 #####    solve Tikhonov regularization (optimised for speed)
                 H = solve_banded((1,1),DTW,T[ind_los,ind_space].T, overwrite_ab=True,check_finite=False)
                 #fast method to calculate U,S,V = svd(H.T) of rectangular matrix 
@@ -1284,6 +1293,8 @@ class LLAMA_tomography():
             #     self.gamma_hfs[tind] = gamma
 
             self.y[tind,ind_space] = y
+            print(y.shape)
+            print(self.y.shape)
             #correction for under/over estimated data uncertainty
             self.y_err[tind,ind_space] = np.sqrt(np.dot(V**2,(w/S)**2))#*chi2[:,None])
 
@@ -1291,11 +1302,14 @@ class LLAMA_tomography():
         self.backprojection[tind] *= self.err[tind].mean(0)
             
             
+        emiss_node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:EMISS')
+        y_cmod = emiss_node.data()
+
         self.y *= self.scale
         self.y_err *= self.scale
         self.R_grid_b = (self.R_grid[1:]+ self.R_grid[:-1])/2
  
-        return self.R_grid_b, self.y,self.y_err, self.backprojection
+        return self.R_grid_b, self.y,self.y_err, self.backprojection, y_cmod
         
         
         
