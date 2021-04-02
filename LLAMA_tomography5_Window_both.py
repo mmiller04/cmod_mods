@@ -220,6 +220,7 @@ class LLAMA_tomography():
         # hfs_z =  HFS_coords[:,2].mean(1)/1e3 #m
 
         lfs_r = node.dim_of(0)
+        lfs_r = np.flip(lfs_r)
         hfs_r = lfs_r - 0.5
         # lfs_z = z_midplane - 0.125
 
@@ -308,6 +309,12 @@ class LLAMA_tomography():
         
         # raw_data = np.vstack(raw).T
         raw_data = node.data()
+
+        ## flip data and remove zero channels
+        raw_data = np.flip(raw_data)
+        # nz_inds = np.where(raw_data.sum(0)>0)
+        # raw_data = raw_data[:,nz_inds[0]]
+
         n_los = len(raw_data[0])
 
         tvec = node.dim_of(1)
