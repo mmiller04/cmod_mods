@@ -10,7 +10,9 @@ from omfit_classes import omfit_mds as om
 import numpy as np
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
-#import profiletools
+sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
+sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
+import profiletools
 import matplotlib.pyplot as plt
 plt.ion()
 #plt.style.use('/home/sciortino/tools3/plots.mplstyle')
@@ -532,6 +534,22 @@ def get_clean_asp_data(shot, time, plot=False):
     Te_prof = np.mean(Te_arr, axis=1)
     Te_unc_prof = np.std(Te_arr, axis=1)
 
+    # plot also edge Thomson data        
+    p_Te_ETS = profiletools.Te(shot, include=['ETS'],
+                              abscissa='sqrtpsinorm',t_min=time-0.2,t_max=time+0.2)
+    p_ne_ETS = profiletools.ne(shot, include=['ETS'],
+                              abscissa='sqrtpsinorm',t_min=time-0.2,t_max=time+0.2)
+        
+    # time average over this time window
+    p_ne_ETS.time_average(weighted=True)
+    p_Te_ETS.time_average(weighted=True)
+        
+    # clean up
+    p_ne_ETS.remove_points(p_ne_ETS.y==0)
+    p_Te_ETS.remove_points(p_Te_ETS.y==0)
+    #p_ne_ETS.remove_points(p_ne_ETS.err_y/p_ne_ETS.y>1.0)
+    #p_Te_ETS.remove_points(p_Te_ETS.err_y/p_Te_ETS.y>1.0)
+        
     if plot:
         ax[0].errorbar(rho, ne_prof, ne_unc_prof, fmt='.', c='k')
         ax[1].errorbar(rho, Te_prof, Te_unc_prof, fmt='.', c='k')
@@ -541,32 +559,16 @@ def get_clean_asp_data(shot, time, plot=False):
         ax[0].set_title(str(shot))
 
 
-        # plot also edge Thomson data        
-        #p_Te_ETS= profiletools.Te(shot, include=['ETS'],
-        #                          abscissa='sqrtpsinorm',t_min=time-0.2,t_max=time+0.2)
-        #p_ne_ETS= profiletools.ne(shot, include=['ETS'],
-        #                          abscissa='sqrtpsinorm',t_min=time-0.2,t_max=time+0.2)
-        
-        # time average over this time window
-        #p_ne_ETS.time_average(weighted=True)
-        #p_Te_ETS.time_average(weighted=True)
-        
-        # clean up
-        #p_ne_ETS.remove_points(p_ne_ETS.y==0)
-        #p_Te_ETS.remove_points(p_Te_ETS.y==0)
-        #p_ne_ETS.remove_points(p_ne_ETS.err_y/p_ne_ETS.y>1.0)
-        #p_Te_ETS.remove_points(p_Te_ETS.err_y/p_Te_ETS.y>1.0)
-        
-        #ax[0].errorbar(p_ne_ETS.X[:,0]-1., p_ne_ETS.y*1e20, p_ne_ETS.err_y*1e20, fmt='.', label='ETS')
-        #ax[1].errorbar(p_Te_ETS.X[:,0]-1., p_Te_ETS.y*1e3, p_Te_ETS.err_y*1e3, fmt='.')
+        ax[0].errorbar(p_ne_ETS.X[:,0]-1., p_ne_ETS.y*1e20, p_ne_ETS.err_y*1e20, fmt='.', label='ETS')
+        ax[1].errorbar(p_Te_ETS.X[:,0]-1., p_Te_ETS.y*1e3, p_Te_ETS.err_y*1e3, fmt='.')
     
-        #ax[0].legend(loc='best').set_draggable(True)
+        ax[0].legend(loc='best').set_draggable(True)
 
         
     else:
         ax = None
 
-    return rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, ax
+    return rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax
 
 
 if __name__=='__main__':
@@ -592,14 +594,14 @@ if __name__=='__main__':
                     1070710004, 1070710005, 1070710006, 1070710011, 1070725009,\
                     1070725010, 1070725011, 1070725016, 1070725023]
 
-    shot = 1100824024
-    time = 1.0
-    out = get_clean_asp_data(shot, time, plot=True)
-    rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, ax = out
+    #shot = 1070511002
+    #time = 1.0
+    #out = get_clean_asp_data(shot, time, plot=True)
+    #rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax = out
 
-#    for shot in probes_shots[:10]:
-#        try:
-#            out = get_clean_asp_data(shot, time, plot=True)
-#            rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, ax = out
-#        except:
-#            pass
+    for shot in probes_shots[:10]:
+        try:
+            out = get_clean_asp_data(shot, time, plot=True)
+            rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, a, b, ax = out
+        except:
+            pass

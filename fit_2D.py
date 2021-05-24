@@ -328,8 +328,9 @@ def Teu_2pt_model(shot,tmin,tmax,ne,Te,r_vec):
     time = (tmax+tmin)/2.
     
     geqdsk = get_geqdsk_cmod(shot,time*1e3)
-    rhop_kp = aurora.rad_coord_transform(r_vec, 'r/a', 'rhop', geqdsk)
-
+    rhop_kp = aurora.rad_coord_transform(r_vec, 'rhop', 'rhop', geqdsk)
+    rhop_kp = np.sqrt(r_vec)
+ 
     # pressure for Brunner scaling of lambda_q
     p_Pa = (ne*1e20) * (Te*1e3*q_electron)
     
@@ -345,7 +346,7 @@ def Teu_2pt_model(shot,tmin,tmax,ne,Te,r_vec):
     Psol = eff *P_RF + P_oh - P_rad
 
     # B fields at the LFS LCFS midplane
-    Rlcfs = aurora.rad_coord_transform(1.0, 'r/a', 'Rmid', geqdsk)
+    Rlcfs = aurora.rad_coord_transform(1.0, 'roa', 'Rmid', geqdsk)
     R_midplane = geqdsk['fluxSurfaces']['midplane']['R']
     Bp_midplane = geqdsk['fluxSurfaces']['midplane']['Bp']
     Bt_midplane = geqdsk['fluxSurfaces']['midplane']['Bt']
@@ -728,11 +729,13 @@ def stretch_profs_new(time_vec, r_vec, Te, ne, Te_LCFS=75.0):
     Stretch in x direction to match chosen temperature (in eV) at LCFS.
     Note that ne and Te must be on the same radial and time bases!
     '''
+    
     TeShifted = copy.deepcopy(Te); neShifted = copy.deepcopy(ne); 
     
     # ensure a temperature of Te_LCFS eV at each time slice
     for ti,tt in enumerate(time_vec):
-        x_of_TeSep = interp1d(TeShifted[ti,:], r_vec, bounds_error=False)(Te_LCFS*1e-3)
+
+        x_of_TeSep = interp1d(TeShifted[ti,:], r_vec, bounds_error=False,fill_value='extrapolate')(Te_LCFS*1e-3)
         xShifted = r_vec/x_of_TeSep
         TeShifted[ti,:] = interp1d(xShifted, TeShifted[ti,:], bounds_error=False)(r_vec)
         neShifted[ti,:] = interp1d(xShifted, ne[ti,:], bounds_error=False)(r_vec)
@@ -740,12 +743,31 @@ def stretch_profs_new(time_vec, r_vec, Te, ne, Te_LCFS=75.0):
         # without extrapolation, some values at the edge may be set to nan. Set them to boundary value:
         whnan = np.isnan(TeShifted)
         if np.sum(whnan):
-            TeShifted[whnan] = TeShifted[~whnan][-1]
+            if whnan[0][-1]:
+                TeShifted[whnan] = TeShifted[~whnan][-1]
+            else:
+                TeShifted[whnan] = TeShifted[~whnan][0]
         whnan = np.isnan(neShifted)
         if np.sum(whnan):
-            neShifted[whnan] = neShifted[~whnan][-1]
+            if whnan[0][-1]:
+                neShifted[whnan] = neShifted[~whnan][-1]
+            else:
+                neShifted[whnan] = neShifted[~whnan][0]
 
     return neShifted, TeShifted
+
+
+def shift_profs(time_vec, r_vec, Te, Te_LCFS=75.0):
+
+    xShifted = np.zeros((len(time_vec),len(r_vec)))
+
+    for ti,tt in enumerate(time_vec):
+
+        x_of_TeSep = interp1d(Te[ti,:], r_vec, bounds_error=False,fill_value='extrapolate')(Te_LCFS*1e-3)
+        xShifted[ti,:] = r_vec + (1 - x_of_TeSep) 
+
+    return xShifted
+
 
 
 def stretch_profs(time_vec,r_vec, Te, Te_u, Te_d, ne, ne_u, ne_d, Te_LCFS=75.0):

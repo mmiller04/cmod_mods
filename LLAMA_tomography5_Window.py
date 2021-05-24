@@ -203,12 +203,17 @@ class LLAMA_tomography():
         
         
         
-    def load_geometry(self):
+    def load_geometry(self,r_end=False,sysErr=0):
         
         node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
+
+        # check which channels are empty
+
+        bright = node.data()
+        self.good_chans = np.where(bright[0] != 0)[0]
         
         # LFS_coords = np.array( data['Data_LFS']['rProfCoords']) 
-        # LFS_weights = np.array( data['Data_LFS']['rProf']) 
+        # LFS_weights = np.array( data['Data_LFS']['rProf'])
 
         # HFS_coords = np.array( data['Data_HFS']['rProfCoords']) 
         # HFS_weights = np.array( data['Data_HFS']['rProf']) 
@@ -219,8 +224,14 @@ class LLAMA_tomography():
         # lfs_z =  LFS_coords[:,2].mean(1)/1e3 #m
         # hfs_z =  HFS_coords[:,2].mean(1)/1e3 #m
 
-        lfs_r = node.dim_of(0)
+        lfs_r = node.dim_of(0)[self.good_chans]
         lfs_r = np.flip(lfs_r) # stored as decreasing
+        
+        if r_end:
+            lfs_r = np.insert(lfs_r,len(lfs_r),r_end) # want to insert a 0 at r_end
+
+        LFS_weights = np.ones(len(lfs_r))
+
         # lfs_z = z_midplane - 0.125
 
         # self.nch_hfs = len(hfs_r)
@@ -243,7 +254,7 @@ class LLAMA_tomography():
         ### ignore claibration for now
 
         self.calf = np.ones(lfs_r.shape)
-        self.calfErr = np.ones(lfs_r.shape)
+        self.calfErr = np.ones(lfs_r.shape)*sysErr/100
 
         # self.calf = np.hstack((HFScalf,LFScalf))
         # self.calfErr = np.hstack((HFScalfErr,LFScalfErr))
@@ -254,11 +265,12 @@ class LLAMA_tomography():
         # R_tg_virtual = np.vstack((hfs_r, lfs_r)).T
         R_tg_virtual = lfs_r
         # weight = np.vstack((HFS_weights, LFS_weights)).T
-        # weight /= np.sum(weight,0)
+        #weight = LFS_weights
+        #weight /= np.sum(weight,0)
 
         #center of mass of the LOS
         self.R_tg = R_tg_virtual
-        # self.R_tg = np.average(R_tg_virtual,0,weight) 
+        #self.R_tg = np.average(R_tg_virtual,0,weight) 
         # self.Z_tg = np.hstack((hfs_z,lfs_z))
 
         self.lfs_min = self.R_tg[0]
@@ -269,16 +281,15 @@ class LLAMA_tomography():
         # self.hfs_min = self.R_tg[:self.nch_hfs].min()
         # self.hfs_max = self.R_tg[:self.nch_hfs].max()
        
-        self.nr = 200
-        self.R_grid = np.linspace(self.lfs_min-.01,self.lfs_max+.05,self.nr)
+        self.nr = 50
+        self.R_grid = np.linspace(self.lfs_min-.01,self.lfs_max+.01,self.nr)
         # self.R_grid = np.hstack((np.linspace(self.hfs_min-.01,self.hfs_max+.05,self.nr),
         #                          np.linspace(self.lfs_min-.01,self.lfs_max+.02,self.nr)))
         
         dL = 2*(np.sqrt(np.maximum((self.R_grid[1:])**2-R_tg_virtual[:,None]**2,0))       
                -np.sqrt(np.maximum( self.R_grid[:-1]**2-R_tg_virtual[:,None]**2,0)))
-        self.dL = np.sum(dL,0)
+        self.dL = dL # no need to sum over spot size
     
-
         # #add more LOS in between existing for a better plotting of the results
         # clipped_grid = np.clip(self.R_grid,self.eR_tg.min(),self.R_tg.max())
         # weights_grid = interp1d(self.R_tg,weight)(clipped_grid) 
@@ -290,7 +301,7 @@ class LLAMA_tomography():
 
     #Simplest data load
     #smooths data for an entire shot
-    def load_data(self):
+    def load_data(self,r_end=False):
 
         # #mds_server = 'localhost'
 
@@ -309,7 +320,13 @@ class LLAMA_tomography():
 
         # raw_data = np.vstack(raw).T
         raw_data = node.data()
+        raw_data = raw_data[:,self.good_chans]
         raw_data = np.flip(raw_data)
+
+        # add a zero at desired r_end value (set in load_geometry)
+        if r_end:
+            _zeros = np.zeros(len(raw_data[:,0]))[:,None]
+            raw_data = np.concatenate((raw_data,_zeros),axis=1)
 
         n_los = len(raw_data[0])
 
@@ -318,8 +335,8 @@ class LLAMA_tomography():
         offset = slice(0,tvec.searchsorted(0))
         dt = (tvec[-1]-tvec[0])/(len(tvec)-1)
 
-        n_smooth = int(20*self.time_avg/dt)
-
+        #n_smooth = int(20*self.time_avg/dt)
+        n_smooth = 1
 
         nt,nch = raw_data.shape
 
@@ -341,6 +358,7 @@ class LLAMA_tomography():
         error_low2 = np.std(data_low[tvec_low<0],0)
         error_low21 = np.std(data_low[tvec_low<0],0)[None,:]
         error_low = np.zeros_like(data_low)+np.std(data_low[tvec_low<0],0)[None,:]/3
+
 
         #guess errorbarss from the variation between neighboring channels
         #ind1 = np.r_[1,0:n_los-1,n_los+1,  n_los:n_los*2-1]
@@ -1293,8 +1311,6 @@ class LLAMA_tomography():
             #     self.gamma_hfs[tind] = gamma
 
             self.y[tind,ind_space] = y
-            print(y.shape)
-            print(self.y.shape)
             #correction for under/over estimated data uncertainty
             self.y_err[tind,ind_space] = np.sqrt(np.dot(V**2,(w/S)**2))#*chi2[:,None])
 
@@ -1302,14 +1318,11 @@ class LLAMA_tomography():
         self.backprojection[tind] *= self.err[tind].mean(0)
             
             
-        emiss_node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:EMISS')
-        y_cmod = emiss_node.data()
-
         self.y *= self.scale
         self.y_err *= self.scale
         self.R_grid_b = (self.R_grid[1:]+ self.R_grid[:-1])/2
  
-        return self.R_grid_b, self.y,self.y_err, self.backprojection, y_cmod
+        return self.R_grid_b, self.y,self.y_err, self.backprojection
         
         
         

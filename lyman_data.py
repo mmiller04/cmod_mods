@@ -47,7 +47,7 @@ def get_geqdsk_cmod(shot,time):
     '''
     time = np.floor(time)   # TODO: better to do this outside!!
     file_name=f'g{shot}.{str(int(time)).zfill(5)}'
-    gfiles_loc = '/home/sciortino/EFIT/gfiles/'
+    gfiles_loc = '/home/millerma/EFIT/gfiles/'
     
     def fetch_and_move():
         geqdsk = omfit_eqdsk.OMFITgeqdsk('').from_mdsplus(

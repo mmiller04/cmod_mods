@@ -255,7 +255,7 @@ class LLAMA_tomography():
         ##create response matrix
 
         ##account for  finite LOS width 
-        R_tg_virtual = np.vstack((hfs_r, lfs_r)).T
+        R_tg_virtual = np.hstack((hfs_r, lfs_r)).T
         # weight = np.vstack((HFS_weights, LFS_weights)).T
         # weight /= np.sum(weight,0)
 
@@ -327,14 +327,18 @@ class LLAMA_tomography():
 
         nt,nch = raw_data.shape
 
-        data_low = raw_data
+        raw_data_padded = np.zeros([nt,int(2*nch)])
+        raw_data_padded[:,nch:] = raw_data
+
+        nch = int(2*nch)
+
         tvec_low = tvec
 
         nt = nt//n_smooth*n_smooth
         
         tvec_low = tvec[:nt].reshape(-1,n_smooth).mean(1)
 
-        data_low = raw_data[:nt].reshape(-1,n_smooth, nch).mean(1)-raw_data[offset].mean(0)
+        data_low = raw_data_padded[:nt].reshape(-1,n_smooth, nch).mean(1)-raw_data_padded[offset].mean(0)
 
         #data = np.load('data.npz')
         #data_low = data['data_low']
@@ -364,10 +368,7 @@ class LLAMA_tomography():
         #make sure that zero value is within errorbars when data are negative
         error_low = np.maximum(error_low, -data_low)
         
-        data_pad = np.zeros(2*len(data_low))
-        data_pad[self.nch_hfs:] = data_low
-
-        self.data = data_pad*self.calf
+        self.data = data_low*self.calf
         # self.data = data_low *self.calf#[ph/m^2s]
         #self.err  = error_low*self.calf#[ph/m^2s] # laggnerf
         self.err  = np.sqrt(\
@@ -375,12 +376,12 @@ class LLAMA_tomography():
                     (data_low*self.calfErr)**2
                    ) #[ph/m^2s] # laggnerf
         self.tvec = tvec_low/1e3 #[s]
-        self.scale = np.median(self.data) #just a normalisation to aviod calculation with so huge exponents
+        self.scale = np.median(self.data[:,self.nch_hfs:]) #just a normalisation to aviod calculation with so huge exponents
         
         #BUG corrupted channel
         #self.err[ :,20+11] *= 10
         #self.data[:,20+11] *= 0.8
-        #self.nt = len(self.tvec)
+        self.nt = len(self.tvec)
         #print(self.nt)
 
     """breaks data into time from ELMS
@@ -1190,14 +1191,17 @@ class LLAMA_tomography():
         itime = np.arange(self.nt)
         tinds = np.array_split(itime, n_blocks)
 
-
-        
         for ib, tind in enumerate(tinds):
 
             T = self.dL/self.err[tind].mean(0)[:,None]*self.scale
             mean_d = self.data[tind].mean(0)/self.err[tind].mean(0)
             d = self.data[tind]/self.err[tind]
+            
+            ## some of elements of self.err will be 0 so replace NaNs with 0
 
+            T[~np.isfinite(T)] = 0
+            mean_d[~np.isfinite(mean_d)] = 0
+            d[~np.isfinite(d)] = 0
 
             #reconstruct both sides independently, just substract LFS contribution from HFS
             for iside,side in enumerate(('LFS', 'HFS')): 
@@ -1304,7 +1308,11 @@ class LLAMA_tomography():
         self.y_err *= self.scale
         self.R_grid_b = (self.R_grid[1:]+ self.R_grid[:-1])/2
  
-        return self.R_grid_b, self.y,self.y_err, self.backprojection
+        node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:EMISS')
+
+        y_cmod = node.data()
+        
+        return self.R_grid_b, self.y,self.y_err, self.backprojection, y_cmod
         
         
         
