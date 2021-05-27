@@ -4,10 +4,9 @@ import numpy as np
 from scipy.stats.mstats import mquantiles
 
 import sys
-#sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools')
-#import efitAR as EFIT
-#import gadata
-#sys.path.insert(1, '/fusion/projects/diagnostics/llama/PythonDataTools/LLAMA_tomo')
+import efitAM as EFIT
+import kinetic_profiles as kp
+
 import LLAMA_tomography5_Window as tomo
 
 
@@ -20,12 +19,12 @@ conn = mds.Connection('alcdata.psfc.mit.edu:8000')
 
 
 def loadEFIT(shotN,dDict):
-	print(dDict['efitID'])
-	try:
-	
-		efit = EFIT.efit(shotN, efit_id = str(dDict['efitID']))
-	except:
-		efit = EFIT.efit(shotN, efit_id = str(dDict['efitID'])[2:8]) #for python 3 b proceeds and causes errors
+	# print(dDict['efitID'])
+	# try:	
+	efit_time = (dDict['tWindow'][0] + dDict['tWindow'][1])/2
+	efit = EFIT.efit(shotN,efit_time)
+	# except:
+	# 	efit = EFIT.efit(shotN, efit_id = str(dDict['efitID'])[2:8]) #for python 3 b proceeds and causes errors
 	print('loaded')
 	dDict['efit'] = efit
 
@@ -57,10 +56,10 @@ def loadShot(shotN, dDict, window = False, smoothT=10):
 
 
 		try:
-			loadTTFit(cShot,filename,subDict)
-			print('loaded Toms Tools fit')
+			loadKineticFitsWindow(cShot,subDict)
+			print('loaded kinetic fits')
 		except:
-			print("no Tom's Tools fit")
+			print("no kinetic fits")
 
 		try:
 			loadEFIT(cShot,subDict)
@@ -85,155 +84,94 @@ def loadShot(shotN, dDict, window = False, smoothT=10):
 	return dDict
 
 
-def loadTTFit(shotN,filename,dDict):
+def loadKineticFitsWindow(shotN,dDict):
 
 	shotN = int(shotN)
 
-
-	neR = gadata.gadata('.'+filename+':NEDATR',shotN,tree = 'PROFDB_PED')
-	neRAux = gadata.gadata('.'+filename+':NEDATR:YAUX',shotN,tree = 'PROFDB_PED')
-
-	nePsi = gadata.gadata('.'+filename+':NEDATPSI',shotN,tree = 'PROFDB_PED')
-	nePsiAux = gadata.gadata('.'+filename+':NEDATPSI:YAUX',shotN,tree = 'PROFDB_PED')
-
-	print('arrays equal?')
-
-	print(np.all(neRAux.zdata == nePsiAux.zdata))
-	print(np.all(neR.zdata ==nePsi.zdata))
-
-
-
+	profs = kp.cmodddata(shotN)
+	profs.ne_Te_data()
 
 	subDict = {}
 
-	subDict['ne'] = neR.zdata*1e20
-	subDict['err_ne'] = neR.zerr*1e20
-	subDict['rMid'] = neR.xdata
-	subDict['err_rMid'] = neR.xerr
-	subDict['psi'] = nePsi.xdata
-	subDict['err_psi'] = nePsi.xerr
-	subDict['t'] = neRAux.zdata[:,1]
-	subDict['eqT'] = neRAux.zdata[:,2]
-	subDict['RTS'] = neRAux.zdata[:,3]
-	subDict['ZTS'] = neRAux.zdata[:,4]
+	subDict['ne'] = profs.ne_data
+	subDict['err_ne'] = profs.ne_err
+	subDict['rMid'] = profs.RMid_ne
+	subDict['err_rMid'] = profs.Rmid_ne_err
+	subDict['psi'] = profs.psin_ne
+	subDict['err_psi'] = profs.psin_ne_err
 
+	# subDict['t'] = neRAux.zdata[:,1]
+	# subDict['eqT'] = neRAux.zdata[:,2]
+	# subDict['RTS'] = neRAux.zdata[:,3]
+	# subDict['ZTS'] = neRAux.zdata[:,4]
 
+	subDict['TS_inds'] = profs.ne_TS_inds
+	subDict['SP_inds'] = profs.ne_SP_inds
 
+	profs.ne_Te_fits()
 
+	# subDict['top'] = neFit.zdata[2]*1e20
+	subDict['fitParam'] = profs.c_ne
+	subDict['fit'] = profs.res_fit_ne
+	subDict['fitPsi'] = profs.psin_ne
+	# subDict['fitRDat'] = neFitR.zdata*1e20
+	# subDict['fitR'] = neFitR.xdata
 
-	neFit = gadata.gadata('.'+filename+':NETANHPSI:FIT_COEF',shotN,tree = 'PROFDB_PED')
-
-	subDict['top'] = neFit.zdata[2]*1e20
-	subDict['fitParam'] = neFit.zdata
-
-	neFit = gadata.gadata('.'+filename+':NETANHPSI:FITDOC',shotN,tree = 'PROFDB_PED')
-
-
-
-	neFit = gadata.gadata('.'+filename+':NETANHPSI',shotN,tree = 'PROFDB_PED')
-
-	subDict['fit'] = neFit.zdata*1e20
-	subDict['fitPsi'] = neFit.xdata
-
-	neFitR = gadata.gadata('.'+filename+':NETANHR',shotN,tree = 'PROFDB_PED')
-
-	subDict['fitRDat'] = neFitR.zdata*1e20
-	subDict['fitR'] = neFitR.xdata
-
-	neTime = gadata.gadata('.'+filename+':TWINDOWS',shotN,tree = 'PROFDB_PED')
 	print('TWINDOWS:')
-	print(neTime.zdata)
-	subDict['tWindow'] = np.asarray(neTime.zdata)
-
+	print(str(self.TS_min)+':'str(self.TS_max))
+	subDict['tWindow'] = np.array([self.TS_min,self.TS_max])
 
 	dDict['ne'] = subDict
 
+
 	subDictT = {}
 
-	teR = gadata.gadata('.'+filename+':TEDATR',shotN,tree = 'PROFDB_PED')
-	teRAux = gadata.gadata('.'+filename+':TEDATR:YAUX',shotN,tree = 'PROFDB_PED')
+	subDictT['te'] = profs.te_data
+	subDictT['err_te'] = profs.te_err
+	subDictT['rMid'] = profs.RMid_te
+	subDictT['err_rMid'] = profs.Rmid_te_err
+	subDictT['psi'] = profs.psin_te
+	subDictT['err_psi'] = profs.psin_te_err
 
-	tePsi = gadata.gadata('.'+filename+':TEDATPSI',shotN,tree = 'PROFDB_PED')
-	tePsiAux = gadata.gadata('.'+filename+':TEDATPSI:YAUX',shotN,tree = 'PROFDB_PED')
+	# subDictT['t'] = neRAux.zdata[:,1]
+	# subDictT['eqT'] = neRAux.zdata[:,2]
+	# subDictT['RTS'] = neRAux.zdata[:,3]
+	# subDictT['ZTS'] = neRAux.zdata[:,4]
 
-	tePsiAuxDOC = gadata.gadata('.'+filename+':TEDATR:YAUX_DOC',shotN,tree = 'PROFDB_PED')
+	subDictT['TS_inds'] = profs.te_TS_inds
+	subDictT['SP_inds'] = profs.te_SP_inds
 
-	print('arrays equal?')
-	print(np.all(teRAux.zdata == tePsiAux.zdata))
-	print(np.all(teR.zdata ==tePsi.zdata))
+	profs.ne_Te_fits()
 
-	subDictT['te'] = teR.zdata*1000
-	subDictT['err_te'] = teR.zerr*1000
-	subDictT['rMid'] = teR.xdata
-	subDictT['err_rMid'] = teR.xerr
-	subDictT['psi'] = tePsi.xdata
-	subDictT['err_psi'] = tePsi.xerr
-	subDictT['t'] = teRAux.zdata[:,1]
-	subDictT['eqT'] = teRAux.zdata[:,2]
-	subDictT['RTS'] = teRAux.zdata[:,3]
-	subDictT['ZTS'] = teRAux.zdata[:,4]
+	# subDictT['top'] = neFit.zdata[2]*1e20
+	subDictT['fitParam'] = profs.c_te
+	subDictT['fit'] = profs.res_fit_te
+	subDictT['fitPsi'] = profs.psin_te
+	# subDictT['fitRDat'] = neFitR.zdata*1e20
+	# subDictT['fitR'] = neFitR.xdata
 
-	teFit = gadata.gadata('.'+filename+':TETANHPSI:FIT_COEF',shotN,tree = 'PROFDB_PED')
-
-	subDictT['top'] = teFit.zdata[2]*1000
-	subDict['fitParam'] = teFit.zdata
-
-	teFit = gadata.gadata('.'+filename+':NETANHPSI:FITDOC',shotN,tree = 'PROFDB_PED')
-
-
-	teFit = gadata.gadata('.'+filename+':TETANHPSI',shotN,tree = 'PROFDB_PED')
-
-	subDictT['fit'] = teFit.zdata*1000
-	subDictT['fitPsi'] = teFit.xdata
-
-	teFitR = gadata.gadata('.'+filename+':TETANHR',shotN,tree = 'PROFDB_PED')
-
-	subDictT['fitRDat'] = teFit.zdata*1000
-	subDictT['fitR'] = teFitR.xdata
+	print('TWINDOWS:')
+	print(str(self.TS_min)+':'str(self.TS_max))
+	subDictT['tWindow'] = np.array([self.TS_min,self.TS_max])
 
 	dDict['te'] = subDictT
 
-
-	conn.openTree('PROFDB_PED',shotN)
-	dDict['efitID'] = str(conn.get('.'+filename+':EFITTREE'))
-
-	"""
-	print(teR.xdata)
-	print(teR.xunits)
-	print(teR.ydata)
-	print(teR.yunits)
-	print(teR.zdata)
-	print(teR.zunits)
-	print(teR.zdata.shape)
-	
-	"""
+	# conn.openTree('PROFDB_PED',shotN)
+	# dDict['efitID'] = str(conn.get('.'+filename+':EFITTREE'))
 
 	return dDict
-
-def loadBrightEmiss(shotN,smoothT,shotDict,fileLoc):
-
-	smoothTTxt = str(smoothT)+'msSmooth'
-
-	# tomoDict     = np.load(   fileLoc+'LLAMA_'+str(int(shotN))+'.npz',allow_pickle=True)
-	tomoDict = tomo.tomoReturn(shotN)
-
-
-	for i, key in enumerate(tomoDict):
-		shotDict[key] = tomoDict[key]
-
-	shotDict['smoothT'] = smoothT
-	return shotDict
 
 
 def loadBrightEmissWindow(shotN,shotDict):
 
-	print('test')
-
-	tomoDict = tomo.tomoWindow(shotDict['ne']['tWindow'])
-
+	tomoDict = tomo.tomoCMOD(shotN,shotDict['ne']['tWindow'])
 
 	for i, key in enumerate(tomoDict):
 		shotDict[key] = tomoDict[key]
 
-	shotDict['smoothT'] = 0 #means infinite
+	# shotDict['smoothT'] = 0 #means infinite
+
 	return shotDict
+
+
+

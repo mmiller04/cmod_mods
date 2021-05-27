@@ -1,4 +1,4 @@
-import matplotlib as mpl
+rimport matplotlib as mpl
 #mpl.rcParams['keymap.back'].remove('left')
 #mpl.rcParams['keymap.forward'].remove('right')
 
@@ -203,7 +203,7 @@ class LLAMA_tomography():
         
         
         
-    def load_geometry(self,r_end=False,sysErr=0):
+    def load_geometry(self,r_end=False,sys_err=0):
         
         node = OMFITmdsValue(server='CMOD',shot=self.shot,treename='SPECTROSCOPY',TDI='\\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.LYMID:BRIGHT')
 
@@ -254,7 +254,7 @@ class LLAMA_tomography():
         ### ignore claibration for now
 
         self.calf = np.ones(lfs_r.shape)
-        self.calfErr = np.ones(lfs_r.shape)*sysErr/100
+        self.calfErr = np.ones(lfs_r.shape)*sys_err/100
 
         # self.calf = np.hstack((HFScalf,LFScalf))
         # self.calfErr = np.hstack((HFScalfErr,LFScalfErr))
@@ -271,7 +271,7 @@ class LLAMA_tomography():
         #center of mass of the LOS
         self.R_tg = R_tg_virtual
         #self.R_tg = np.average(R_tg_virtual,0,weight) 
-        # self.Z_tg = np.hstack((hfs_z,lfs_z))
+        self.Z_tg = 0 # assume at midplane
 
         self.lfs_min = self.R_tg[0]
         self.lfs_max = self.R_tg[-1]
@@ -386,7 +386,7 @@ class LLAMA_tomography():
                     (error_low*self.calf)**2+\
                     (data_low*self.calfErr)**2
                    ) #[ph/m^2s] # laggnerf
-        self.tvec = tvec_low/1e3 #[s]
+        self.tvec = tvec_low #[s]
         self.scale = np.median(self.data) #just a normalisation to aviod calculation with so huge exponents
         
         #BUG corrupted channel
@@ -1503,29 +1503,54 @@ class LLAMA_tomography():
                           brightness_err = np.single(self.err[tind]))
         print('saved')
 
-    def package2return(self):
-
+    def package2return(self,tWindow=False):
+        
         dDict = {}
 
-        dDict['time'] = self.tvec
         dDict['R_tg'] = self.R_tg
         dDict['Z_tg'] = self.Z_tg
-        dDict['backprojection'] = self.backprojection
         dDict['radial_grid'] = self.R_grid_b
-        dDict['emiss'] = self.y
 
-        dDict['emiss_err'] = self.y_err
-        dDict['brightness'] = self.data
 
-        dDict['brightness_err'] = self.err
-        dDict['tAvr'] = self.time_avg
+        if tWindow:
 
-        try: 
-            dDict['brightness_raw'] = self.rawData
-            return dDict
-        except:
+            ind_min = np.where(self.tvec <= tWindow[0]/1e3)[0][-1]
+            ind_max = np.where(self.tvec >= tWindow[1]/1e3)[0][0]
 
-            return dDict
+            dDict['time'] = self.tvec[ind_min:ind_max+1]
+            dDict['backprojection'] = self.backprojection[ind_min:ind_max+1]
+            dDict['emiss'] = self.y[ind_min:ind_max+1]
+
+            dDict['emiss_err'] = self.y_err[ind_min:ind_max+1]
+            dDict['brightness'] = self.data[ind_min:ind_max+1]
+
+            dDict['brightness_err'] = self.err[ind_min:ind_max+1]
+            dDict['tAvr'] = self.time_avg
+
+            try: 
+                dDict['brightness_raw'] = self.rawData[ind_min:ind_max+1]
+                return dDict
+            except:
+
+                return dDict
+
+        else:
+            dDict['time'] = self.tvec
+            dDict['backprojection'] = self.backprojection
+            dDict['emiss'] = self.y
+
+            dDict['emiss_err'] = self.y_err
+            dDict['brightness'] = self.data
+
+            dDict['brightness_err'] = self.err
+            dDict['tAvr'] = self.time_avg
+
+            try: 
+                dDict['brightness_raw'] = self.rawData
+                return dDict
+            except:
+
+                return dDict
 
 
     
@@ -1698,7 +1723,16 @@ def tomoRunSave(shot, tAvr = 0.01,fileLoc=''):
     tomo.save(None, fileLoc)
 
 
+def tomoCMOD(shot,tWindow=False,r_end=0.93,sys_err=10):
 
+    tomo = LLAMA_tomography(shot,time_avg=0) # cmod brightness data already smoothed in time
+    tomo.load_geometry(r_end=r_end,sys_err=sys_err)
+    tomo.load_data(r_end=r_end)
+    tomo.calc_tomo()
+
+    if tWindow:
+
+    return tomo.package2return()
 
 
 if __name__ == "__main__":
