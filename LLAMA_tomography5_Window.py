@@ -1,4 +1,4 @@
-rimport matplotlib as mpl
+import matplotlib as mpl
 #mpl.rcParams['keymap.back'].remove('left')
 #mpl.rcParams['keymap.forward'].remove('right')
 
@@ -1730,9 +1730,10 @@ def tomoCMOD(shot,tWindow=False,r_end=0.93,sys_err=10):
     tomo.load_data(r_end=r_end)
     tomo.calc_tomo()
 
-    if tWindow:
-
-    return tomo.package2return()
+    if tWindow == False:
+        return tomo.package2return()
+    else:
+        return tomo.package2return(tWindow)
 
 
 if __name__ == "__main__":

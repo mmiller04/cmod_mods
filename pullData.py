@@ -45,9 +45,9 @@ def loadShot(shotN, dDict, window = False, smoothT=10):
     for i in range(len(shotN)):
         subDict = {}
 
-
-        cShot = shotN[i,0]
-        filename = shotN[i,1]
+        print('hello')
+        cShot = shotN[i]
+#        filename = shotN[i,1]
 
 
         subDict['shotN'] = int(cShot)
@@ -118,7 +118,7 @@ def loadKineticFitsWindow(shotN,dDict):
     # subDict['fitR'] = neFitR.xdata
 
     print('TWINDOWS:')
-    print(str(self.TS_min)+':'str(self.TS_max))
+    print(str(self.TS_min)+':'+str(self.TS_max))
     subDict['tWindow'] = np.array([self.TS_min,self.TS_max])
 
     dDict['ne'] = subDict
@@ -151,7 +151,7 @@ def loadKineticFitsWindow(shotN,dDict):
     # subDictT['fitR'] = neFitR.xdata
 
     print('TWINDOWS:')
-    print(str(self.TS_min)+':'str(self.TS_max))
+    print(str(self.TS_min)+':'+str(self.TS_max))
     subDictT['tWindow'] = np.array([self.TS_min,self.TS_max])
 
     dDict['te'] = subDictT
