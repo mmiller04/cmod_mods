@@ -1730,10 +1730,7 @@ def tomoCMOD(shot,tWindow=False,r_end=0.93,sys_err=10):
     tomo.load_data(r_end=r_end)
     tomo.calc_tomo()
 
-    if tWindow == False:
-        return tomo.package2return()
-    else:
-        return tomo.package2return(tWindow)
+    return tomo.package2return(tWindow)
 
 
 if __name__ == "__main__":

@@ -92,13 +92,13 @@ def main():
 
     # shotList = np.array([[183031,'P3000_REFSEP']])
 
-        shotList = np.array([[1070511002,'QUICKFITID']])
+        shotList = np.array([1070511002])
 
         for i in range(len(shotList)):
             
                 cItem = np.array([shotList[i]])
                 print(cItem)
-                key = str(cItem[0,0])+'_'+cItem[0,1]
+                key = str(cItem[0])
                 dDict = pde.shotDict(cItem,ADASfile)
             
             

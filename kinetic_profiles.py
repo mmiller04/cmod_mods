@@ -1,5 +1,6 @@
 ### script to gather and prcoess ne and Te from ETS and ASP
 
+import numpy as np
 import asp_probes as probes
 import tanh_fitting as tanh
 import fit_2D as fit
@@ -29,7 +30,7 @@ class cmoddata:
         ne_unc_prof = ne_unc_prof[np.where(rho<1.02)]
 
         # calculate Te at LCFS from 2pt model
-        Te_lcfs_eV = fit.Teu_2pt_model(shot,p_Te_ETS.t_min,p_Te_ETS.t_max,p_ne_ETS.y,p_Te_ETS.y,p_Te_ETS.X[:,0])
+        Te_lcfs_eV = fit.Teu_2pt_model(self.shot,p_Te_ETS.t_min,p_Te_ETS.t_max,p_ne_ETS.y,p_Te_ETS.y,p_Te_ETS.X[:,0])
 
         # shift profiles independently
         _out = fit.shift_profs([1],p_Te_ETS.X[:,0],p_Te_ETS.y[None,:],Te_LCFS=Te_lcfs_eV)
@@ -41,9 +42,9 @@ class cmoddata:
 
         # concatenate shifted profiles
         rho_ne_combined = np.hstack((rho_ne_ETS[0],rho_ASP[0]))
-        rho_ne_err_combined = np.hstack((p_ne_ETS.err_X,rho_unc))
+        rho_ne_err_combined = np.hstack((p_ne_ETS.err_X[:,0],rho_unc))
         rho_Te_combined = np.hstack((rho_Te_ETS[0],rho_ASP[0]))
-        rho_Te_err_combined = np.hstack((p_Te_ETS.err_X,rho_unc))
+        rho_Te_err_combined = np.hstack((p_Te_ETS.err_X[:,0],rho_unc))
         ne_combined = np.hstack((p_ne_ETS.y*1e20,ne_prof))
         ne_err_combined = np.hstack((p_ne_ETS.err_y*1e20,ne_unc_prof))
         Te_combined = np.hstack((p_Te_ETS.y*1e3,Te_prof))
@@ -91,7 +92,7 @@ class cmoddata:
         self.Rmid_ne = aurora.rad_coord_transform(self.rho_ne,'rhop','Rmid',geqdsk)
         self.Rmid_ne_err = aurora.rad_coord_transform(self.rho_ne_err,'rhop','Rmid',geqdsk)
         self.Rmid_Te = aurora.rad_coord_transform(self.rho_Te,'rhop','Rmid',geqdsk)
-        self.Rmid_Te_err = aurora.rad_coord_transform(self.rho_Te.err,'rhop','Rmid',geqdsk)
+        self.Rmid_Te_err = aurora.rad_coord_transform(self.rho_Te_err,'rhop','Rmid',geqdsk)
 
         # store time of TS: +/- 0.2 time of plunge
         self.TS_tmin = p_ne_ETS.t_min

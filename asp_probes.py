@@ -435,7 +435,6 @@ def boxcar(data,window):
 def get_fsp_data_included(ASP,pnodes,ip,shot,no_indices,indices):
 
     node_string = ASP + '.G_1' + pnodes[ip] + ':NE_FAST'
-    print(node_string)
     work_Ne = OMFITmdsValue(server='CMOD',shot=shot,treename='edge',TDI=node_string).data()
     if no_indices:
         node_string = 'Error_of('+node_string+')'
@@ -522,6 +521,29 @@ def get_clean_asp_data(shot, time, plot=False):
     res = min([len(data['N']['rho']),len(data['S']['rho']),len(data['E']['rho']),len(data['W']['rho'])])
     rho = np.linspace(min_rho,max_rho,res)
 
+    ### rho variable currently R - R_sep (m) - transform to rhop (sqrt of psin)
+
+    sys.path.append('/home/millerma/Aurora')
+    import aurora
+    sys.path.append('/home/millerma/lya/cmod_mods')
+    from lyman_data import get_geqdsk_cmod
+
+    geqdsk = get_geqdsk_cmod(shot,time*1e3)
+
+    # get position of separatrix in m
+    R_sep = aurora.rad_coord_transform(np.array(1),'rhop','Rmid',geqdsk)
+
+    # convert to rhop
+    rhop = aurora.rad_coord_transform(rho+R_sep,'Rmid','rhop',geqdsk)
+
+    # assume uncertainty in probe data is 5mm (or get from EFIT)
+    rho_unc = np.ones(len(rhop))*2.5e-3
+    rhop_unc0 = aurora.rad_coord_transform(R_sep-rho_unc,'Rmid','rhop',geqdsk)
+    rhop_unc1 = aurora.rad_coord_transform(R_sep+rho_unc,'Rmid','rhop',geqdsk)
+    rhop_unc = rhop_unc1-rhop_unc0
+
+    ### resume
+
     ne_arr = np.zeros((len(rho),4))
     Te_arr = np.zeros((len(rho),4))
     for ii,side in enumerate(['N','S','E','W']):
@@ -568,7 +590,7 @@ def get_clean_asp_data(shot, time, plot=False):
     else:
         ax = None
 
-    return rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax
+    return rhop, rhop_unc, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax
 
 
 if __name__=='__main__':

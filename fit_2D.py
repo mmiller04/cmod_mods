@@ -322,7 +322,7 @@ def Teu_2pt_model(shot,tmin,tmax,ne,Te,r_vec):
     '''
     import aurora
     from scipy.constants import e as q_electron
-    sys.path.insert(1, '/home/sciortino/tools3/neutrals')
+    sys.path.insert(1, '/home/millerma/lya/mitlya')
     from lyman_data import get_CMOD_var, get_geqdsk_cmod
     import twopoint_model
     time = (tmax+tmin)/2.
@@ -766,7 +766,7 @@ def shift_profs(time_vec, r_vec, Te, Te_LCFS=75.0):
         x_of_TeSep = interp1d(Te[ti,:], r_vec, bounds_error=False,fill_value='extrapolate')(Te_LCFS*1e-3)
         xShifted[ti,:] = r_vec + (1 - x_of_TeSep) 
 
-    return xShifted
+    return xShifted, x_of_TeSep
 
 
 

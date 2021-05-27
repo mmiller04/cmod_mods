@@ -21,11 +21,10 @@ conn = mds.Connection('alcdata.psfc.mit.edu:8000')
 def loadEFIT(shotN,dDict):
     # print(dDict['efitID'])
     # try:  
-    efit_time = (dDict['tWindow'][0] + dDict['tWindow'][1])/2
+    efit_time = (dDict['ne']['tWindow'][0] + dDict['ne']['tWindow'][1])/2
     efit = EFIT.efit(shotN,efit_time)
     # except:
     #   efit = EFIT.efit(shotN, efit_id = str(dDict['efitID'])[2:8]) #for python 3 b proceeds and causes errors
-    print('loaded')
     dDict['efit'] = efit
 
     return dDict
@@ -45,7 +44,6 @@ def loadShot(shotN, dDict, window = False, smoothT=10):
     for i in range(len(shotN)):
         subDict = {}
 
-        print('hello')
         cShot = shotN[i]
 #        filename = shotN[i,1]
 
@@ -76,7 +74,7 @@ def loadShot(shotN, dDict, window = False, smoothT=10):
             print('loaded Inversion')
 
 
-        dDict[str(cShot)+'_'+filename] = subDict
+        dDict[str(cShot)] = subDict
 
 
 
@@ -88,14 +86,14 @@ def loadKineticFitsWindow(shotN,dDict):
 
     shotN = int(shotN)
 
-    profs = kp.cmodddata(shotN)
+    profs = kp.cmoddata(shotN)
     profs.ne_Te_data()
 
     subDict = {}
 
     subDict['ne'] = profs.ne_data
     subDict['err_ne'] = profs.ne_err
-    subDict['rMid'] = profs.RMid_ne
+    subDict['rMid'] = profs.Rmid_ne
     subDict['err_rMid'] = profs.Rmid_ne_err
     subDict['psi'] = profs.psin_ne
     subDict['err_psi'] = profs.psin_ne_err
@@ -118,41 +116,41 @@ def loadKineticFitsWindow(shotN,dDict):
     # subDict['fitR'] = neFitR.xdata
 
     print('TWINDOWS:')
-    print(str(self.TS_min)+':'+str(self.TS_max))
-    subDict['tWindow'] = np.array([self.TS_min,self.TS_max])
+    print(str(profs.TS_tmin)+':'+str(profs.TS_tmax))
+    subDict['tWindow'] = [profs.TS_tmin,profs.TS_tmax]
 
     dDict['ne'] = subDict
 
 
     subDictT = {}
 
-    subDictT['te'] = profs.te_data
-    subDictT['err_te'] = profs.te_err
-    subDictT['rMid'] = profs.RMid_te
-    subDictT['err_rMid'] = profs.Rmid_te_err
-    subDictT['psi'] = profs.psin_te
-    subDictT['err_psi'] = profs.psin_te_err
+    subDictT['te'] = profs.Te_data
+    subDictT['err_te'] = profs.Te_err
+    subDictT['rMid'] = profs.Rmid_Te
+    subDictT['err_rMid'] = profs.Rmid_Te_err
+    subDictT['psi'] = profs.psin_Te
+    subDictT['err_psi'] = profs.psin_Te_err
 
     # subDictT['t'] = neRAux.zdata[:,1]
     # subDictT['eqT'] = neRAux.zdata[:,2]
     # subDictT['RTS'] = neRAux.zdata[:,3]
     # subDictT['ZTS'] = neRAux.zdata[:,4]
 
-    subDictT['TS_inds'] = profs.te_TS_inds
-    subDictT['SP_inds'] = profs.te_SP_inds
+    subDictT['TS_inds'] = profs.Te_TS_inds
+    subDictT['SP_inds'] = profs.Te_SP_inds
 
     profs.ne_Te_fits()
 
     # subDictT['top'] = neFit.zdata[2]*1e20
-    subDictT['fitParam'] = profs.c_te
-    subDictT['fit'] = profs.res_fit_te
-    subDictT['fitPsi'] = profs.psin_te
+    subDictT['fitParam'] = profs.c_Te
+    subDictT['fit'] = profs.res_fit_Te
+    subDictT['fitPsi'] = profs.psin_Te
     # subDictT['fitRDat'] = neFitR.zdata*1e20
     # subDictT['fitR'] = neFitR.xdata
 
     print('TWINDOWS:')
-    print(str(self.TS_min)+':'+str(self.TS_max))
-    subDictT['tWindow'] = np.array([self.TS_min,self.TS_max])
+    print(str(profs.TS_tmin)+':'+str(profs.TS_tmax))
+    subDictT['tWindow'] = [profs.TS_tmin,profs.TS_tmax]
 
     dDict['te'] = subDictT
 

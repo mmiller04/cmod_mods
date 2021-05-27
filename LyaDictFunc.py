@@ -789,7 +789,7 @@ def shotDict(shotList,ADASfile):
 
         currDict = dDict[key]
 
-        nWindows = currDict['ne']['tWindow'].shape[-1]
+        nWindows = np.array([currDict['ne']['tWindow']]).shape[-1]
 
 
 
