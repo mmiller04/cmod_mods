@@ -13,58 +13,58 @@ import ADAShelper as ADAS
 
 
 def CombineDict(dList,saveName):
-	out = {}
+    out = {}
 
 
-	for i in range(len(dList)):
-		key = str(dList[i,0])+'_'+dList[i,1]
+    for i in range(len(dList)):
+        key = str(dList[i,0])+'_'+dList[i,1]
 
-		print('\n')
-		print('\n')
-		print(key)
+        print('\n')
+        print('\n')
+        print(key)
 
 
-		ELMDict = pde.load_dict('Dicts/'+key)
-		out[key] = ELMDict[key]
+        ELMDict = pde.load_dict('Dicts/'+key)
+        out[key] = ELMDict[key]
 
-	pde.save_dict(out, saveName)
+    pde.save_dict(out, saveName)
 
-	return 0
+    return 0
 
 def modifyDict(dictList):
-	ADASfile = ADAS.ADAS(1215.2)
+    ADASfile = ADAS.ADAS(1215.2)
 
-	for i in range(len(dictList)):
+    for i in range(len(dictList)):
 
-		cItem = np.array([shotList[i]])
-		key = str(cItem[0,0])+'_'+cItem[0,1]
-		print('\n')
-		print(key)
-		cDict = pde.load_dict('Dicts/'+key)[key]
+        cItem = np.array([shotList[i]])
+        key = str(cItem[0,0])+'_'+cItem[0,1]
+        print('\n')
+        print(key)
+        cDict = pde.load_dict('Dicts/'+key)[key]
 
-		import pdb
-		pdb.set_trace()
-
-
-
-		filename = cItem[0,1]
-		shotN = int(cItem[0,0])
-
-		#fluxRS,BC,r,fluxErr = pde.FluxProf(cDict)
-		
-		ttrz,err = pde.mapTT2LLAMA(cDict)
-		cDict['TS_lya_rz'] = ttrz
-		cDict['err_TS_lya_rz'] = err
+        import pdb
+        pdb.set_trace()
 
 
-		pde.save_dict({key:cDict},'Dicts/'+key)
-		
 
-		
+        filename = cItem[0,1]
+        shotN = int(cItem[0,0])
 
-		
+        #fluxRS,BC,r,fluxErr = pde.FluxProf(cDict)
+        
+        ttrz,err = pde.mapTT2LLAMA(cDict)
+        cDict['TS_lya_rz'] = ttrz
+        cDict['err_TS_lya_rz'] = err
 
-	return 0 
+
+        pde.save_dict({key:cDict},'Dicts/'+key)
+        
+
+        
+
+        
+
+    return 0 
 
 
 def main():
@@ -72,25 +72,25 @@ def main():
         ADASfile = ADAS.ADAS(1215.2)
         #ADASfile = '/home/sciortino/Aurora/aurora/adas_data/adf15/pec12#h_pju#h0.dat'
 
-	
-	
-	# shotList = np.array([[180907,'P3500_AMRNOV'],[180913,'P3800_AMRNOV'],\
-	# 	[180912,'P3700_AMRNOV'],[180914,'P3400_AMRNOV'],\
-	# 	[180915,'P3400_AMRNOV'],[180916,'P3400_AMRNOV'],[180913,'P2700_AMRNOV'],[180914,'P2600_AMRNOV']])
+    
+    
+    # shotList = np.array([[180907,'P3500_AMRNOV'],[180913,'P3800_AMRNOV'],\
+    #   [180912,'P3700_AMRNOV'],[180914,'P3400_AMRNOV'],\
+    #   [180915,'P3400_AMRNOV'],[180916,'P3400_AMRNOV'],[180913,'P2700_AMRNOV'],[180914,'P2600_AMRNOV']])
 
 
-	# shotList = np.array([[184313,'P3750_TFDay2'],[184313,'P3100_TFDay2'],[184314,'P2900_TFDay2'],\
-	# 	[184314,'P3700_TFDay2'],[184315,'P3100_TFDay2'],[184315,'P3800_TFDay2'],[184368,'P3800_TFDay2'],\
-	# 	[184368,'P3100_TFDay2']])
-	# shotList = np.array([[184315,'P3800_TFDay2'],[184368,'P3800_TFDay2'],\
-	# 	[184368,'P3100_TFDay2']])
+    # shotList = np.array([[184313,'P3750_TFDay2'],[184313,'P3100_TFDay2'],[184314,'P2900_TFDay2'],\
+    #   [184314,'P3700_TFDay2'],[184315,'P3100_TFDay2'],[184315,'P3800_TFDay2'],[184368,'P3800_TFDay2'],\
+    #   [184368,'P3100_TFDay2']])
+    # shotList = np.array([[184315,'P3800_TFDay2'],[184368,'P3800_TFDay2'],\
+    #   [184368,'P3100_TFDay2']])
 
-	# shotList = np.array([[184370,'P3000_TFDAY2'],[184313,'P3100_TFDay2'],\
-	# 	[184374,'P3050_TFDAY2'],[184375,'P3250_TFDAY2']])
+    # shotList = np.array([[184370,'P3000_TFDAY2'],[184313,'P3100_TFDay2'],\
+    #   [184374,'P3050_TFDAY2'],[184375,'P3250_TFDAY2']])
 
-	# shotList = np.array([[183031,'P3000_REFSEP'],[184366,'P3000_REFSEP']])
+    # shotList = np.array([[183031,'P3000_REFSEP'],[184366,'P3000_REFSEP']])
 
-	# shotList = np.array([[183031,'P3000_REFSEP']])
+    # shotList = np.array([[183031,'P3000_REFSEP']])
 
         shotList = np.array([[1070511002,'QUICKFITID']])
 
@@ -113,22 +113,22 @@ def main():
 
 if __name__ == "__main__":
 
-	
-	main()
-	"""
-	shotList = np.array([[184313,'P1950_TFDay2'],[184313,'P3100_TFDay2'],[184314,'P2900_TFDay2'],\
-		[184315,'P3100_TFDay2'],[184368,'P3100_TFDay2']])
-	shotList = np.array([[184313,'P1950_TFDay2'],[184313,'P3100_TFDay2'],\
-		[184315,'P3100_TFDay2'],[184314,'P3700_TFDay2']])
-	
-	shotList = np.array([[184313,'P1950_TFDay2'],[184313,'P3750_TFDay2'],\
-		[184314,'P3700_TFDay2'],[184315,'P3800_TFDay2']])
-	
-	shotList = np.array([[180907,'P3500_AMRNOV'],[184307,'P2600_TFDay2'],[184309,'P2900_TFDay2']])
-	
-	"""
-	# shotList = np.array([[183031,'P3000_REFSEP'],[184366,'P3000_REFSEP']])
+    
+    main()
+    """
+    shotList = np.array([[184313,'P1950_TFDay2'],[184313,'P3100_TFDay2'],[184314,'P2900_TFDay2'],\
+        [184315,'P3100_TFDay2'],[184368,'P3100_TFDay2']])
+    shotList = np.array([[184313,'P1950_TFDay2'],[184313,'P3100_TFDay2'],\
+        [184315,'P3100_TFDay2'],[184314,'P3700_TFDay2']])
+    
+    shotList = np.array([[184313,'P1950_TFDay2'],[184313,'P3750_TFDay2'],\
+        [184314,'P3700_TFDay2'],[184315,'P3800_TFDay2']])
+    
+    shotList = np.array([[180907,'P3500_AMRNOV'],[184307,'P2600_TFDay2'],[184309,'P2900_TFDay2']])
+    
+    """
+    # shotList = np.array([[183031,'P3000_REFSEP'],[184366,'P3000_REFSEP']])
 
-	#CombineDict(shotList,'RefComp')
+    #CombineDict(shotList,'RefComp')
 
-	
+    
