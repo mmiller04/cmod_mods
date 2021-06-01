@@ -15,7 +15,7 @@ class efit:
 
         self.efit_id = efit_id
 
-        geqdsk = get_geqdsk_cmod(self.shotnumber,self.time)
+        geqdsk = get_geqdsk_cmod(self.shotnumber,self.time) # eqdsk file only gotten for 1 time
 
 #        self.limiter = geqdsk['LIM']
         self.psi = geqdsk['PSIRZ']
@@ -25,11 +25,29 @@ class efit:
         self.psi_boundary = geqdsk['SIBRY']
         self.psi_mag_axis = geqdsk['SIMAG']
 
-        self.psin = []
-        for i in range(len(self.psi)):
-            self.psin.append(np.divide(self.psi[i] - self.psi_mag_axis, self.psi_boundary - self.psi_mag_axis))
+        self.psin = np.divide(self.psi - self.psi_mag_axis, self.psi_boundary - self.psi_mag_axis)
 
 #        self.rr = np.tile(self.r, (len(self.z), 1))
 #        self.zz = np.transpose(np.tile(self.z, (len(self.r), 1)))
 
         return None
+
+
+    def rz2Psi(self, rzArray):
+
+        #intepolate the psi grid
+        psiInt = interpolate.interp2d(self.r, self.z, self.psin)
+
+        psiArr = np.zeros(len(rzArray))
+
+        for i in range(len(rzArray)):
+            currR = rzArray[i,0]
+            currZ = rzArray[i,1]
+
+            psiArr[i] = psiInt(currR,currZ)
+
+        return psiArr
+
+
+
+

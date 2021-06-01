@@ -117,7 +117,7 @@ def loadKineticFitsWindow(shotN,dDict):
 
     print('TWINDOWS:')
     print(str(profs.TS_tmin)+':'+str(profs.TS_tmax))
-    subDict['tWindow'] = [profs.TS_tmin,profs.TS_tmax]
+    subDict['tWindow'] = [[profs.TS_tmin,profs.TS_tmax]]
 
     dDict['ne'] = subDict
 
@@ -150,7 +150,7 @@ def loadKineticFitsWindow(shotN,dDict):
 
     print('TWINDOWS:')
     print(str(profs.TS_tmin)+':'+str(profs.TS_tmax))
-    subDictT['tWindow'] = [profs.TS_tmin,profs.TS_tmax]
+    subDictT['tWindow'] = [[profs.TS_tmin,profs.TS_tmax]]
 
     dDict['te'] = subDictT
 

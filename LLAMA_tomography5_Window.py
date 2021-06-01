@@ -271,7 +271,7 @@ class LLAMA_tomography():
         #center of mass of the LOS
         self.R_tg = R_tg_virtual
         #self.R_tg = np.average(R_tg_virtual,0,weight) 
-        self.Z_tg = 0 # assume at midplane
+        self.Z_tg = np.zeros_like(self.R_tg) # assume at midplane (z = 0)
 
         self.lfs_min = self.R_tg[0]
         self.lfs_max = self.R_tg[-1]

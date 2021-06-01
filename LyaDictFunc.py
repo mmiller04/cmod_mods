@@ -8,7 +8,7 @@ import sys
 
 import ADAShelper as ADAS
 #import DEGAShelper as DEGAS
-#import efitAR as EFIT
+import efitAM as EFIT
 #import gadata
 
 import scipy.interpolate as interpolate
@@ -165,33 +165,27 @@ def AveEmiss(dDict,tStart, tEnd):
 
 def windowAveQuant(tag,cDict,tree = None):
 
-    quant = gadata.gadata(tag,cDict['shotN'],tree = tree)
+    quant = OMFITmdsValue(server='cmod',shot=int(cDict['shotN']),treename=tree,TDI=tag) 
 
-
-    if quant.xunits !='ms':
-        print('ERORR: Expected ms got '+str(quant.xunits))
-
-    nWindows = cDict['ne']['tWindow'].shape[-1]
+    # nWindows = cDict['ne']['tWindow'].shape[-1]
+    nWindows = len(nWindows)
 
     AveQuant = np.zeros(nWindows)
 
     for i in range(nWindows):
 
-
-        cWindow = cDict['ne']['tWindow'][:,i]
+        cWindow = cDict['ne']['tWindow'][i]
 
         tStart = cWindow[0]
         tEnd = cWindow[1]
 
-
-
-        iStart = np.argmin(np.abs(quant.xdata-tStart))
-        iEnd = np.argmin(np.abs(quant.xdata-tEnd))
-        AveQuant[i] = np.mean(quant.zdata[iStart:iEnd])
+        iStart = np.argmin(np.abs(quant.dim_of(0)-tStart))
+        iEnd = np.argmin(np.abs(quant.dim_of(0)-tEnd))
+        AveQuant[i] = np.mean(quant.data()[iStart:iEnd])
 
     #removing NaN values which come from iStart = iEnd
     ave = np.mean(AveQuant[np.logical_not(np.isnan(AveQuant))])
-    print(tag+' is: '+ str(ave)+ ' '+quant.zunits)
+    print(tag[2:]+' is: '+ str(ave)+ ' '+quant.units())
     return ave
 
 #recursive function for finding psi point on the line between rz1 and rz2
@@ -440,11 +434,9 @@ def meTTHelper(currDict,RZemissPts,emiss,efit,nr):
 
     for i in range(len(ne)):
 
-        efitT = currDict['ne']['eqT'][i]
+        # efitT = currDict['ne']['eqT'][i]
 
-        psiVal = efit.rz2Psi(RZemissPts[nr:],efitT)
-
-
+        psiVal = efit.rz2Psi(RZemissPts[nr:])
 
         emissInt = interpolate.interp1d(psiVal,emiss,fill_value = 'extrapolate')
 
@@ -461,11 +453,12 @@ def mapEmissTT(shotDict,emiss,FWHM=0.08):
     currDict = shotDict
     efit = currDict['efit']
     R_tomo = currDict['radial_grid']
-    z_tomo = np.interp(R_tomo, currDict['R_tg'],currDict['Z_tg'] )
+    z_tomo = np.interp(R_tomo, currDict['R_tg'], currDict['Z_tg'])
 
     ne = currDict['ne']['ne']
 
-    nr = len(R_tomo)//2
+    # nr = len(R_tomo)//2
+    nr = 0 # this is used to index LFS data (I think) - on CMOD all data is LFS
 
     RZemissPts = np.column_stack((R_tomo,z_tomo))
 
@@ -794,7 +787,7 @@ def shotDict(shotList,ADASfile):
 
 
         #we need the shape of the emissivity array
-        nr = len(currDict['radial_grid'])//2
+        # nr = len(currDict['radial_grid'])//2
 
         # add on the number of windows we are looking at
         eShape = np.append(currDict['emiss'][-1,nr:].shape,nWindows)
@@ -805,15 +798,15 @@ def shotDict(shotList,ADASfile):
         
         #take the averges over the ELM windows
 
-        gPAve = windowAveQuant('gasa_cal',currDict)
-        currAve =  windowAveQuant('Ip',currDict)
-        dTopAve = windowAveQuant('.PROFILE_FITS.TANHFIT.DENSITY:PED',currDict,tree = 'ELECTRONS')
-        neBarAve = windowAveQuant('density',currDict)
-        pInjA = windowAveQuant('pinj',currDict)
+        # gPAve = windowAveQuant('gasa_cal',currDict)
+        currAve =  windowAveQuant('\\ip',currDict,tree='MAGNETICS')
+        # dTopAve = windowAveQuant('.PROFILE_FITS.TANHFIT.DENSITY:PED',currDict,tree = 'ELECTRONS') - difference between a['ne']['top'] ?
+        neBarAve = windowAveQuant('\\TOP.TCI.RESULTS.INVERSION:NEBAR_EFIT',currDict,tree='ELECTRONS')
+        # pInjA = windowAveQuant('pinj',currDict)
 
 
-        aEmiss =np.ndarray.flatten(currDict['emiss'])[nr:]
-        aEmissErr =np.ndarray.flatten(currDict['emiss_err'])[nr:]
+        aEmiss =np.ndarray.flatten(currDict['emiss'])
+        aEmissErr =np.ndarray.flatten(currDict['emiss_err'])
 
         currDict['aveEmiss']=aEmiss
         currDict['aveEmissErr']=aEmissErr
@@ -824,11 +817,12 @@ def shotDict(shotList,ADASfile):
         #load them up
         currDict['map_emiss'] = mapE
         currDict['err_map_emiss'] = mapEErr
-        currDict['densTop'] = dTopAve
-        currDict['gasPuff']=gPAve
+        # currDict['densTop'] = dTopAve
+        # currDict['gasPuff']=gPAve
         currDict['neBar'] = neBarAve
         currDict['current']=currAve
-        currDict['pInj'] = pInjA
+        # currDict['pInj'] = pInjA
+        
         """
         TTrz ,TTrzErr= mapTT2LLAMA(dDict[key])
         currDict['TS_lya_rz'] = TTrz
