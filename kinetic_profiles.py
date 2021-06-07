@@ -35,7 +35,8 @@ class cmoddata:
         # shift profiles independently
         _out = fit.shift_profs([1],p_Te_ETS.X[:,0],p_Te_ETS.y[None,:],Te_LCFS=Te_lcfs_eV)
         rho_Te_ETS, xSep = _out
-        rho_ne_ETS = p_ne_ETS.X[:,0] + (1 - xSep)
+        rho_ne_ETS = np.zeros((len([1]),len(p_ne_ETS.X[:,0])))
+        rho_ne_ETS[0,:] = p_ne_ETS.X[:,0] + (1 - xSep)
 
         _out = fit.shift_profs([1],rho,Te_prof[None,:]*1e-3,Te_LCFS=Te_lcfs_eV)
         rho_ASP, xSep = _out
@@ -48,8 +49,7 @@ class cmoddata:
         ne_combined = np.hstack((p_ne_ETS.y*1e20,ne_prof))
         ne_err_combined = np.hstack((p_ne_ETS.err_y*1e20,ne_unc_prof))
         Te_combined = np.hstack((p_Te_ETS.y*1e3,Te_prof))
-        Te_err_combined = np.hstack((p_Te_ETS.err_y*1e20,ne_unc_prof))
-
+        Te_err_combined = np.hstack((p_Te_ETS.err_y*1e3,Te_unc_prof))
 
         ne_sorted_inds = np.argsort(rho_ne_combined)
 
@@ -76,12 +76,12 @@ class cmoddata:
         # get indices corresponding to ETS and ASP
 
         num_ne_TS = len(p_ne_ETS.y)
-        self.ne_TS_inds = np.argsort(ne_sorted_inds[:num_ne_TS])
-        self.ne_SP_inds = np.argsort(ne_sorted_inds[num_ne_TS:])
+        self.ne_TS_inds = ne_sorted_inds[:num_ne_TS]
+        self.ne_SP_inds = ne_sorted_inds[num_ne_TS:]
 
         num_Te_TS = len(p_Te_ETS.y)
-        self.Te_TS_inds = np.argsort(Te_sorted_inds[:num_Te_TS])
-        self.Te_SP_inds = np.argsort(Te_sorted_inds[num_Te_TS:])
+        self.Te_TS_inds = Te_sorted_inds[:num_Te_TS]
+        self.Te_SP_inds = Te_sorted_inds[num_Te_TS:]
 
         # store also in terms of big R
 

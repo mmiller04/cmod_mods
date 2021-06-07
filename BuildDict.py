@@ -92,7 +92,7 @@ def main():
 
     # shotList = np.array([[183031,'P3000_REFSEP']])
 
-        shotList = np.array([1070511002])
+        shotList = np.array([1080514012])
 
         for i in range(len(shotList)):
             

@@ -335,6 +335,7 @@ def Teu_2pt_model(shot,tmin,tmax,ne,Te,r_vec):
     p_Pa = (ne*1e20) * (Te*1e3*q_electron)
     
     indLCFS = np.argmin(np.abs(rhop_kp-1.0))
+
     p_Pa_vol_avg = aurora.vol_average(p_Pa[:indLCFS], rhop_kp[:indLCFS],geqdsk=geqdsk)[-1]
     
     P_rad = get_CMOD_var(var='P_rad',shot=shot, tmin=tmin, tmax=tmax, plot=False)

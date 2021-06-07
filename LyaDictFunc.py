@@ -10,6 +10,7 @@ import ADAShelper as ADAS
 #import DEGAShelper as DEGAS
 import efitAM as EFIT
 #import gadata
+from omfit_classes.omfit_mds import OMFITmdsValue
 
 import scipy.interpolate as interpolate
 from scipy import optimize
@@ -108,8 +109,9 @@ def load_dict(filename):
 
         #you can't save efit objects so load it after the fact
         try:
-            print(subDict['efitID'])
-            lD.loadEFIT(key[:6],subDict)
+#            print(subDict['efitID'])
+            print(subDict['shotN'])
+            lD.loadEFIT(subDict['shotN'],subDict)
 
 
             dDict[key] = subDict
@@ -167,8 +169,8 @@ def windowAveQuant(tag,cDict,tree = None):
 
     quant = OMFITmdsValue(server='cmod',shot=int(cDict['shotN']),treename=tree,TDI=tag) 
 
-    # nWindows = cDict['ne']['tWindow'].shape[-1]
-    nWindows = len(nWindows)
+    nWindows = len(cDict['ne']['tWindow'])
+   # nWindows = len(nWindows)
 
     AveQuant = np.zeros(nWindows)
 
@@ -185,7 +187,7 @@ def windowAveQuant(tag,cDict,tree = None):
 
     #removing NaN values which come from iStart = iEnd
     ave = np.mean(AveQuant[np.logical_not(np.isnan(AveQuant))])
-    print(tag[2:]+' is: '+ str(ave)+ ' '+quant.units())
+    print(tag[1:]+' is: '+ str(ave)+ ' '+quant.units())
     return ave
 
 #recursive function for finding psi point on the line between rz1 and rz2
@@ -666,19 +668,22 @@ def calcNeutIon(shotDict,RATEobj,key):
 
     res = np.zeros(len(ne))
     err = np.zeros(len(ne))
+
     for i in range(len(ne)):
         cPsi = shotDict['ne']['psi'][i]
 
         #converting to W/cm^3 so multiply by energy of photon
-        cEmiss = shotDict['map_emiss'][i] *(4*np.pi)*10**(-6)*1.642*10**(-18)
-        cEErr = shotDict['err_map_emiss'][i] *(4*np.pi)*10**(-6)*1.642*10**(-18)
+        cEmiss = shotDict['map_emiss'][i]*1e-6
+        cEErr = shotDict['err_map_emiss'][i]*1e-6
+#        cEmiss = shotDict['map_emiss'][i] *(4*np.pi)*10**(-6)*1.642*10**(-18)
+#        cEErr = shotDict['err_map_emiss'][i] *(4*np.pi)*10**(-6)*1.642*10**(-18)
 
         #< 0 condition is actually error in extrpolation in mappEmiss
         if cPsi<0.8 or cEmiss < 0 :
             continue
 
         #converting to W/cm^3 so multiply by energy of photon
-
+        # convert to cm^-3 
 
         cNe = ne[i]*10**(-6)#convert to cm^(-3)
         cNeE = neErr[i]*10**(-6)#convert to cm^(-3)
@@ -782,12 +787,12 @@ def shotDict(shotList,ADASfile):
 
         currDict = dDict[key]
 
-        nWindows = np.array([currDict['ne']['tWindow']]).shape[-1]
-
-
+#        nWindows = np.array([currDict['ne']['tWindow']]).shape[-1]
+        nWindows = len(np.array(currDict['ne']['tWindow']))
 
         #we need the shape of the emissivity array
-        # nr = len(currDict['radial_grid'])//2
+        #nr = len(currDict['radial_grid'])//2
+        nr = 0
 
         # add on the number of windows we are looking at
         eShape = np.append(currDict['emiss'][-1,nr:].shape,nWindows)
@@ -805,8 +810,10 @@ def shotDict(shotList,ADASfile):
         # pInjA = windowAveQuant('pinj',currDict)
 
 
-        aEmiss =np.ndarray.flatten(currDict['emiss'])
-        aEmissErr =np.ndarray.flatten(currDict['emiss_err'])
+#        aEmiss =np.ndarray.flatten(currDict['emiss'])
+#        aEmissErr =np.ndarray.flatten(currDict['emiss_err'])
+        aEmiss = np.mean(currDict['emiss'],axis=0)
+        aEmissErr = np.mean(currDict['emiss_err'],axis=0)
 
         currDict['aveEmiss']=aEmiss
         currDict['aveEmissErr']=aEmissErr

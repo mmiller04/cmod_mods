@@ -1511,11 +1511,10 @@ class LLAMA_tomography():
         dDict['Z_tg'] = self.Z_tg
         dDict['radial_grid'] = self.R_grid_b
 
-
         if tWindow:
-
-            ind_min = np.where(self.tvec <= tWindow[0]/1e3)[0][-1]
-            ind_max = np.where(self.tvec >= tWindow[1]/1e3)[0][0]
+        
+            ind_min = np.where(self.tvec <= tWindow[0])[0][-1]
+            ind_max = np.where(self.tvec >= tWindow[1])[0][0]
 
             dDict['time'] = self.tvec[ind_min:ind_max+1]
             dDict['backprojection'] = self.backprojection[ind_min:ind_max+1]
@@ -1726,11 +1725,12 @@ def tomoRunSave(shot, tAvr = 0.01,fileLoc=''):
 def tomoCMOD(shot,tWindow=False,r_end=0.93,sys_err=10):
 
     tomo = LLAMA_tomography(shot,time_avg=0) # cmod brightness data already smoothed in time
-    tomo.load_geometry(r_end=r_end,sys_err=sys_err)
+    tomo.load_geometry(r_end=r_end,sys_err=5)
     tomo.load_data(r_end=r_end)
     tomo.calc_tomo()
-
-    return tomo.package2return(tWindow)
+    
+    # assume there is only one window for the time being
+    return tomo.package2return(tWindow[0])
 
 
 if __name__ == "__main__":

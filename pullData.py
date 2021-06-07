@@ -21,7 +21,8 @@ conn = mds.Connection('alcdata.psfc.mit.edu:8000')
 def loadEFIT(shotN,dDict):
     # print(dDict['efitID'])
     # try:  
-    efit_time = (dDict['ne']['tWindow'][0] + dDict['ne']['tWindow'][1])/2
+    # assume only 1 window
+    efit_time = (dDict['ne']['tWindow'][0][0] + dDict['ne']['tWindow'][0][1])/2
     efit = EFIT.efit(shotN,efit_time)
     # except:
     #   efit = EFIT.efit(shotN, efit_id = str(dDict['efitID'])[2:8]) #for python 3 b proceeds and causes errors
@@ -53,11 +54,11 @@ def loadShot(shotN, dDict, window = False, smoothT=10):
         #subDict['gasPuff'] = shotN[i,3]
 
 
-        try:
-            loadKineticFitsWindow(cShot,subDict)
-            print('loaded kinetic fits')
-        except:
-            print("no kinetic fits")
+        #try:
+        loadKineticFitsWindow(cShot,subDict)
+        #    print('loaded kinetic fits')
+        #except:
+        #    print("no kinetic fits")
 
         try:
             loadEFIT(cShot,subDict)

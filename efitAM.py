@@ -2,6 +2,8 @@
 
 import numpy as np
 from lyman_data import get_geqdsk_cmod
+from scipy import interpolate
+from omfit_classes.omfit_mds import OMFITmdsValue
 
 class efit:
 
@@ -19,7 +21,9 @@ class efit:
 
 #        self.limiter = geqdsk['LIM']
         self.psi = geqdsk['PSIRZ']
+        self.r = OMFITmdsValue(server='cmod',shot=self.shotnumber,treename='analysis',TDI='\EFIT_GEQDSK:R').data()
 #        self.r = geqdsk['R']
+        self.z = OMFITmdsValue(server='cmod',shot=self.shotnumber,treename='analysis',TDI='\EFIT_GEQDSK:Z').data()
 #        self.z = geqdsk['Z']
 #        self.times = geqdsk['GTIME']
         self.psi_boundary = geqdsk['SIBRY']

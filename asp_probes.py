@@ -509,9 +509,9 @@ def get_clean_asp_data(shot, time, plot=False):
         asp_Ne = savgol_filter(data[side]['Ne'],5,1)
         asp_Te = savgol_filter(data[side]['Te'],5,1)
             
-        if plot:
-            ax[0].plot(data[side]['rho'], asp_Ne,'o', label=f'ASP-{side}')
-            ax[1].plot(data[side]['rho'], asp_Te,'o')
+#        if plot:
+#            ax[0].plot(data[side]['rho'], asp_Ne,'o', label=f'ASP-{side}')
+#            ax[1].plot(data[side]['rho'], asp_Te,'o')
 
     # -----------------------
     # take averages between different probe sides
@@ -616,14 +616,14 @@ if __name__=='__main__':
                     1070710004, 1070710005, 1070710006, 1070710011, 1070725009,\
                     1070725010, 1070725011, 1070725016, 1070725023]
 
-    #shot = 1070511002
-    #time = 1.0
-    #out = get_clean_asp_data(shot, time, plot=True)
-    #rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax = out
+    shot = 1070511002
+    time = 1.0
+    out = get_clean_asp_data(shot, time, plot=True)
+    rho, rho_unc, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax = out
 
-    for shot in probes_shots[:10]:
-        try:
-            out = get_clean_asp_data(shot, time, plot=True)
-            rho, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, a, b, ax = out
-        except:
-            pass
+#    for shot in probes_shots[:10]:
+#        try:
+#            out = get_clean_asp_data(shot, time, plot=True)
+#            rho, rho_unc, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, a, b, ax = out
+#        except:
+#            pass

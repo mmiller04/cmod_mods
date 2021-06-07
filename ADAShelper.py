@@ -75,11 +75,14 @@ class ADAS:
 
     def recom(self,ne,te):
 
-        return 10**self.recomFunc(np.log10(ne), np.log10(te))
+#        return 10**self.recomFunc(np.log10(ne), np.log10(te))
+        return self.recomFunc(np.log10(ne), np.log10(te))
+        
 
     def excit(self,ne,te):
 
-        return 10**self.excFunc(np.log10(ne), np.log10(te))
+#        return 10**self.excFunc(np.log10(ne), np.log10(te))
+        return self.excFunc(np.log10(ne), np.log10(te))
 
     """Inputs:
     emiss - in W/cm^3-float
@@ -95,7 +98,6 @@ class ADAS:
         neErr = float(neErr)
         teErr = float(teErr)
         niErr = float(niErr)
-
 
         n0,n0Err = self.calcNDens(emiss,ne,ni,te,emissErr,neErr,niErr,teErr)
         #print('n0: '+str(n0))
@@ -145,9 +147,20 @@ class ADAS:
 
         #1.986*10**(-15) is photons * Angstroms (from wavelength)/plancks constant * speed of light
         #so the emiss*wvl/1.98*10**-15  where emiss in W/cm^3 is of units photon/cm^3/s
+
+
+        print('emiss_photons',emiss*self.wvl/(1.98*10**(-15)))
+        print('emiss_watts',emiss)
+        print('ne',ne)
+        print('ni',ni)
+        print('te',te)
+        print('exc',excCoef)
+        print('recom',recomCoef)
+
+
         dens = emiss*self.wvl/(1.986449*10**(-15)*(ne*excCoef+ni*recomCoef))
 
-
+        print('dens',dens)
 
 
         # Now calculating error, we can't do easy error propogation for coefficients
@@ -156,6 +169,7 @@ class ADAS:
         nete = genPair(ne,te,neErr,teErr)
 
         #We will take the min and max difference from value and calculate the mean
+
         errExC  = [self.excit(x[0],x[1])-excCoef for x in nete]
         errExC = (np.amax(errExC)+np.amin(errExC))/2
 
@@ -214,7 +228,8 @@ class ADAS:
         return emiss
 
 def genPair(x,y,xErr,yErr):
-    return np.column_stack((np.concatenate((np.tile(x+xErr,2),np.tile(x-xErr,2))),np.tile([y+yErr,y-yErr],2)))
+
+    return np.column_stack((np.concatenate((np.tile(x+xErr,2),np.tile(np.maximum(x-xErr,1e-10),2))),np.tile([y+yErr,np.maximum(y-yErr,1e-10)],2)))
 
 
 
