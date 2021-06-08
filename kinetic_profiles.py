@@ -2,6 +2,7 @@
 
 import numpy as np
 import asp_probes as probes
+from scipy.optimize import curve_fit
 import tanh_fitting as tanh
 import fit_2D as fit
 
@@ -22,24 +23,41 @@ class cmoddata:
         rho, rho_unc, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax = _out
 
         # remove bad ASP_Te values (usually happens for rho > 1.02)
-        rho = rho[np.where(rho<1.02)]
-        rho_unc = rho[np.where(rho<1.02)]
-        Te_prof = Te_prof[np.where(rho<1.02)]
-        Te_unc_prof = Te_unc_prof[np.where(rho<1.02)]
-        ne_prof = ne_prof[np.where(rho<1.02)]
-        ne_unc_prof = ne_unc_prof[np.where(rho<1.02)]
+        Te_cut = 1.02
+        rho = rho[np.where(rho<Te_cut)]
+        rho_unc = rho_unc[np.where(rho<Te_cut)]
+        Te_prof = Te_prof[np.where(rho<Te_cut)]
+        Te_unc_prof = Te_unc_prof[np.where(rho<Te_cut)]
+        ne_prof = ne_prof[np.where(rho<Te_cut)]
+        ne_unc_prof = ne_unc_prof[np.where(rho<Te_cut)]
 
         # calculate Te at LCFS from 2pt model
         Te_lcfs_eV = fit.Teu_2pt_model(self.shot,p_Te_ETS.t_min,p_Te_ETS.t_max,p_ne_ETS.y,p_Te_ETS.y,p_Te_ETS.X[:,0])
 
-        # shift profiles independently
-        _out = fit.shift_profs([1],p_Te_ETS.X[:,0],p_Te_ETS.y[None,:],Te_LCFS=Te_lcfs_eV)
-        rho_Te_ETS, xSep = _out
-        rho_ne_ETS = np.zeros((len([1]),len(p_ne_ETS.X[:,0])))
-        rho_ne_ETS[0,:] = p_ne_ETS.X[:,0] + (1 - xSep)
+        ## fit TS/SP before shifting
 
-        _out = fit.shift_profs([1],rho,Te_prof[None,:]*1e-3,Te_LCFS=Te_lcfs_eV)
-        rho_ASP, xSep = _out
+        # SP
+        def probe_func(x,a,k,b):
+        	return a*np.exp(-k*x)+b
+
+        popt,pcov = curve_fit(probe_func,rho-1,Te_prof)
+        Te_ASP_fit = probe_func(rho-1,*popt)
+        popt,pcov = curve_fit(probe_func,rho-1,ne_prof)
+        ne_ASP_fit = probe_func(rho-1,*popt)
+
+        # TS
+        _out = tanh.super_fit(p_Te_ETS.X[:,0],p_Te_ETS.y)
+        Te_ETS_fit, c_Te = _out
+        _out = tanh.super_fit(p_Te_ETS.X[:,0],p_ne_ETS.y)
+        ne_ETS_fit, c_ne = _out
+
+
+        # shift profiles independently
+        _out = fit.shift_profs([1],p_Te_ETS.X[:,0],Te_ETS_fit[None,:],p_ne_ETS.X[:,0],Te_LCFS=Te_lcfs_eV)
+        rho_Te_ETS, rho_ne_ETS, xSep_TS = _out
+
+        _out = fit.shift_profs([1],rho,Te_ASP_fit[None,:]*1e-3,Te_LCFS=Te_lcfs_eV)
+        rho_ASP, xSep_SP = _out
 
         # concatenate shifted profiles
         rho_ne_combined = np.hstack((rho_ne_ETS[0],rho_ASP[0]))
