@@ -3,6 +3,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import asp_probes as probes
+import thomson as ts
 from scipy.optimize import curve_fit
 import tanh_fitting as tanh
 import fit_2D as fit
@@ -17,51 +18,17 @@ class cmoddata:
 
     def ne_Te_data(self):
 
-        # guess time for probe plunge
-        time_plunge = 1.0
+        ## get Thomson data
 
-        try:
-            _out = probes.get_clean_asp_data(self.shot,self.time_plunge)
-            rho, rho_unc, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax = _out
-            print('Probes fetched')
+        _out = ts.get_thomson_data(self.shot,self.time_plunge)
+        p_ne_ETS, p_Te_ETS = _out
 
-            # remove bad ASP_Te values (usually happens for rho > 1.02)
-            Te_cut = 1.01
-            rho = rho[np.where(rho<Te_cut)]
-            rho_unc = rho_unc[np.where(rho<Te_cut)]
-            Te_prof = Te_prof[np.where(rho<Te_cut)]
-            Te_unc_prof = Te_unc_prof[np.where(rho<Te_cut)]
-            ne_prof = ne_prof[np.where(rho<Te_cut)]
-            ne_unc_prof = ne_unc_prof[np.where(rho<Te_cut)]
-
-        except:
-            print('Probe fetch failed')
-
-
-        ## fit TS/SP before shifting
-
-        # SP
-        def probe_func(x,a,k,b):
-            return a*np.exp(-k*x)+b
-
-        _out = curve_fit(probe_func,rho-1,Te_prof)
-        popt_Te,pcov_Te = _out
-        Te_ASP_fit = probe_func(rho-1,*popt_Te)
-
-        _out = curve_fit(probe_func,rho-1,ne_prof/1e19)
-        popt_ne,pcov_ne = _out
-        ne_ASP_fit = probe_func(rho-1,*popt_ne)
-
-        self.Te_ASP_fit = Te_ASP_fit
-        self.ne_ASP_fit = ne_ASP_fit*1e19
-        self.rho_ASP_fit = rho
-
+        # TS
         min_ETS_X = p_Te_ETS.X.min() if p_Te_ETS.X.min() < p_ne_ETS.X.min() else p_ne_ETS.X.min()
         max_ETS_X = p_Te_ETS.X.max() if p_Te_ETS.X.max() > p_ne_ETS.X.max() else p_ne_ETS.X.max()
         res_ETS_X = np.linspace(min_ETS_X,max_ETS_X,100)
 
-        # TS
-        try: # sometimes get underflow error when errors put in 
+        try: # sometimes get underflow error when errorbars put in 
             _out = tanh.super_fit(p_Te_ETS.X[:,0],p_Te_ETS.y,vals_unc=p_Te_ETS.err_y,x_out=res_ETS_X)
         except:
             _out = tanh.super_fit(p_Te_ETS.X[:,0],p_Te_ETS.y,x_out=res_ETS_X)
@@ -87,27 +54,96 @@ class cmoddata:
         if xSep_TS == 1:
             print('TS shift failed')
 
-        rho_ne_ETS = p_ne_ETS.X[:,0] + (1 - xSep_TS) 
-        rho_Te_ETS = p_Te_ETS.X[:,0] + (1 - xSep_TS) 
-
-        _out = fit.shift_profs([1],rho,Te_ASP_fit[None,:]*1e-3,Te_LCFS=Te_lcfs_eV)
-        rho_ASP, xSep_SP = _out
-        if xSep_SP == 1:
-            print('probe shift failed')
+        rho_ne_ETS = p_ne_ETS.X.transpose() + (1 - xSep_TS) 
+        rho_Te_ETS = p_Te_ETS.X.transpose() + (1 - xSep_TS) 
 
         self.xSep_TS = xSep_TS
-        self.xSep_SP = xSep_SP
+
+        ## try to get probe data
+
+        # guess time for probe plunge
+        time_plunge = 1.0
+
+        try:
+            _out = probes.get_clean_asp_data(self.shot,self.time_plunge)
+            rho, rho_unc, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, a, b, ax = _out
+            print('Probes fetched')
+    
+            # try to fit probes for shift
+
+            # remove bad ASP_Te values (usually happens for rho > 1.02)
+            Te_cut = 1.02
+            probe_fit = False # if False, probes will not be fit (and not be shifted)
+
+            while not probe_fit:
+                rho = rho[np.where(rho<Te_cut)]
+                rho_unc = rho_unc[np.where(rho<Te_cut)]
+                Te_prof = Te_prof[np.where(rho<Te_cut)]
+                Te_unc_prof = Te_unc_prof[np.where(rho<Te_cut)]
+                ne_prof = ne_prof[np.where(rho<Te_cut)]
+                ne_unc_prof = ne_unc_prof[np.where(rho<Te_cut)]
+       
+                # try to fit probes for shift
+                try_again = 'n' # exits while loop if not set to 'y'
+                try:
+                    _out = fit_probes(rho,Te_prof,ne_prof,plot=True)
+                    rho_ASP_fit,Te_ASP_fit,ne_ASP_fit = _out
+                    self.rho_ASP_fit,self.Te_ASP_fit,self.ne_ASP_fit = rho_ASP_fit,Te_ASP_fit,ne_ASP_fit
+                    print('Probes fit successful')
+
+                    probe_fit_good = input('Probe fit good? (y/n) ')
+
+                    if probe_fit_good == 'y':
+                        probe_fit = True
+                    else:
+                        try_again = input('Try again? (y/n) ')
+
+                except:
+                    print('Probe fit failed')
+                    try_again = input('Try again? (y/n) ')
+                    
+                if try_again == 'n':
+                    probe_fit = True
+                else:
+                    Te_cut -= 0.005
+                    if Te_cut <= np.min(rho):
+                        print('Te_cut too small')
+                        probe_fit = True # exit while loop without fit
+                        self.rho_ASP_fit,self.Te_ASP_fit,self.ne_ASP_fit = np.array([]),np.array([]),np.array([])     
+
+            # try to shift probes
+            _out = fit.shift_profs([1],rho,Te_ASP_fit[None,:]*1e-3,Te_LCFS=Te_lcfs_eV)
+            rho_ASP, xSep_SP = _out
+            if xSep_SP == 1:
+                print('Probe shift failed')
+            self.xSep_SP = xSep_SP
+
+            plot_probes(rho,Te_prof,Te_ASP_fit,ne_prof,ne_ASP_fit) # change to plot also TS
+            probes_good = input('Keep probes? (y/n) ')
+
+            if probes_good == 'n':
+                rho_ASP,rho_unc,ne_prof,ne_unc_prof,Te_prof,Te_unc_prof = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
+                self.rho_ASP_fit,self.Te_ASP_fit,self.ne_ASP_fit = np.array([]),np.array([]),np.array([])
+                self.xSep_SP = 0
+
+        except: 
+            print('Probe fetch failed')
+            rho_ASP,rho_unc,ne_prof,ne_unc_prof,Te_prof,Te_unc_prof = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
+            self.rho_ASP_fit,self.Te_ASP_fit,self.ne_ASP_fit = np.array([]),np.array([]),np.array([])
+            self.xSep_SP = 0
 
         # concatenate shifted profiles
-        rho_ne_combined = np.hstack((rho_ne_ETS,rho_ASP[0]))
+        rho_ne_combined = np.hstack((rho_ne_ETS[0],rho_ASP))
         rho_ne_err_combined = np.hstack((p_ne_ETS.err_X[:,0],rho_unc))
-        rho_Te_combined = np.hstack((rho_Te_ETS,rho_ASP[0]))
+        rho_Te_combined = np.hstack((rho_Te_ETS[0],rho_ASP))
         rho_Te_err_combined = np.hstack((p_Te_ETS.err_X[:,0],rho_unc))
         ne_combined = np.hstack((p_ne_ETS.y*1e20,ne_prof))
         ne_err_combined = np.hstack((p_ne_ETS.err_y*1e20,ne_unc_prof))
         Te_combined = np.hstack((p_Te_ETS.y*1e3,Te_prof))
         Te_err_combined = np.hstack((p_Te_ETS.err_y*1e3,Te_unc_prof))
 
+        # do this only if one time slice
+#        rho_ne_combined = rho_ne_combined[0]
         ne_sorted_inds = np.argsort(rho_ne_combined)
 
         self.rho_ne = rho_ne_combined[ne_sorted_inds] # poloidal flux (rhop = sqrt(psi_norm))
@@ -119,6 +155,8 @@ class cmoddata:
         self.ne_data = ne_combined[ne_sorted_inds]
         self.ne_err = ne_err_combined[ne_sorted_inds]
 
+        # do this only if one time slice
+#        rho_Te_combined = rho_Te_combined[0]
         Te_sorted_inds = np.argsort(rho_Te_combined)
         
         self.rho_Te = rho_Te_combined[Te_sorted_inds] # poloidal flux (rhop = sqrt(psi_norm))
@@ -159,8 +197,8 @@ class cmoddata:
         self.TS_tmax = p_ne_ETS.t_max
 
         return None
-
-
+        
+    
     def ne_Te_fits(self):
 
         # fit profiles using tanh
@@ -194,6 +232,39 @@ class cmoddata:
         plt.show()
 
         return None
+
+
+
+def fit_probes(rho,Te_prof,ne_prof,plot=False):
+    
+    # SP
+    def probe_func(x,a,k,b):
+        return a*np.exp(-k*x)+b
+
+    _out = curve_fit(probe_func,rho-1,Te_prof)
+    popt_Te,pcov_Te = _out
+    Te_ASP_fit = probe_func(rho-1,*popt_Te)
+
+    _out = curve_fit(probe_func,rho-1,ne_prof/1e19)
+    popt_ne,pcov_ne = _out
+    ne_ASP_fit = probe_func(rho-1,*popt_ne)*1e19
+
+    plot_probes(rho,Te_prof,Te_ASP_fit,ne_prof,ne_ASP_fit)
+
+    return rho,Te_ASP_fit,ne_ASP_fit
+
+
+def plot_probes(rho,Te,Te_fit,ne,ne_fit):
+
+    fig,ax = plt.subplots(2,sharex=True)
+    ax[0].plot(rho,Te,'o')
+    ax[0].plot(rho,Te_fit,'--')
+    ax[1].plot(rho,ne,'o')
+    ax[1].plot(rho,ne_fit,'--')
+    plt.show()
+
+    return None
+
 
 
 
