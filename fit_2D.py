@@ -758,16 +758,26 @@ def stretch_profs_new(time_vec, r_vec, Te, ne, Te_LCFS=75.0):
     return neShifted, TeShifted
 
 
-def shift_profs(time_vec, r_vec, Te, Te_LCFS=75.0):
+def shift_profs(time_vec, r_vec, Te, r_vec_ne=np.array([]), Te_LCFS=75.0):
 
     xShifted = np.zeros((len(time_vec),len(r_vec)))
-
+    xShifted_ne = np.zeros_like(xShifted)
+   
     for ti,tt in enumerate(time_vec):
 
         x_of_TeSep = interp1d(Te[ti,:], r_vec, bounds_error=False,fill_value='extrapolate')(Te_LCFS*1e-3)
-        xShifted[ti,:] = r_vec + (1 - x_of_TeSep) 
 
-    return xShifted, x_of_TeSep
+        if np.abs(1-x_of_TeSep) > 0.05:
+            print('Cannot determine accurate shift')
+            x_of_TeSep = 1 # no shift - probably a problem with probes
+
+        xShifted[ti,:] = r_vec + (1 - x_of_TeSep) 
+        xShifted_ne[ti,:] = r_vec_ne + (1 - x_of_TeSep) if r_vec_ne.size>0 else xShifted[ti,:]
+
+    if r_vec_ne.size==0: 
+        return xShifted, x_of_TeSep
+    else:
+        return xShifted, xShifted_ne, x_of_TeSep
 
 
 

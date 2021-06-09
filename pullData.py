@@ -56,9 +56,9 @@ def loadShot(shotN, dDict, window = False, smoothT=10):
 
         #try:
         loadKineticFitsWindow(cShot,subDict)
-        #    print('loaded kinetic fits')
+            #print('loaded kinetic fits')
         #except:
-        #    print("no kinetic fits")
+            #print("no kinetic fits")
 
         try:
             loadEFIT(cShot,subDict)
@@ -115,6 +115,8 @@ def loadKineticFitsWindow(shotN,dDict):
     subDict['fitPsi'] = profs.psin_ne
     # subDict['fitRDat'] = neFitR.zdata*1e20
     # subDict['fitR'] = neFitR.xdata
+    subDict['R_LCFS'] = profs.Rmid_LCFS
+
 
     print('TWINDOWS:')
     print(str(profs.TS_tmin)+':'+str(profs.TS_tmax))
@@ -148,12 +150,17 @@ def loadKineticFitsWindow(shotN,dDict):
     subDictT['fitPsi'] = profs.psin_Te
     # subDictT['fitRDat'] = neFitR.zdata*1e20
     # subDictT['fitR'] = neFitR.xdata
+    subDictT['R_LCFS'] = profs.Rmid_LCFS
 
     print('TWINDOWS:')
     print(str(profs.TS_tmin)+':'+str(profs.TS_tmax))
     subDictT['tWindow'] = [[profs.TS_tmin,profs.TS_tmax]]
 
     dDict['te'] = subDictT
+
+    # plot profiles to make sure all is good
+
+    profs.plot_ne_Te()
 
     # conn.openTree('PROFDB_PED',shotN)
     # dDict['efitID'] = str(conn.get('.'+filename+':EFITTREE'))

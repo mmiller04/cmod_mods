@@ -569,8 +569,8 @@ def get_clean_asp_data(shot, time, plot=False):
     # clean up
     p_ne_ETS.remove_points(p_ne_ETS.y==0)
     p_Te_ETS.remove_points(p_Te_ETS.y==0)
-    #p_ne_ETS.remove_points(p_ne_ETS.err_y/p_ne_ETS.y>1.0)
-    #p_Te_ETS.remove_points(p_Te_ETS.err_y/p_Te_ETS.y>1.0)
+    p_ne_ETS.remove_points(p_ne_ETS.err_y/p_ne_ETS.y>1.0)
+    p_Te_ETS.remove_points(p_Te_ETS.err_y/p_Te_ETS.y>1.0)
         
     if plot:
         ax[0].errorbar(rho, ne_prof, ne_unc_prof, fmt='.', c='k')
@@ -616,7 +616,7 @@ if __name__=='__main__':
                     1070710004, 1070710005, 1070710006, 1070710011, 1070725009,\
                     1070725010, 1070725011, 1070725016, 1070725023]
 
-    shot = 1070511002
+    shot = 1080514012
     time = 1.0
     out = get_clean_asp_data(shot, time, plot=True)
     rho, rho_unc, ne_prof, ne_unc_prof, Te_prof, Te_unc_prof, p_ne_ETS, p_Te_ETS, ax = out

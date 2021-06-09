@@ -149,18 +149,7 @@ class ADAS:
         #so the emiss*wvl/1.98*10**-15  where emiss in W/cm^3 is of units photon/cm^3/s
 
 
-        print('emiss_photons',emiss*self.wvl/(1.98*10**(-15)))
-        print('emiss_watts',emiss)
-        print('ne',ne)
-        print('ni',ni)
-        print('te',te)
-        print('exc',excCoef)
-        print('recom',recomCoef)
-
-
         dens = emiss*self.wvl/(1.986449*10**(-15)*(ne*excCoef+ni*recomCoef))
-
-        print('dens',dens)
 
 
         # Now calculating error, we can't do easy error propogation for coefficients

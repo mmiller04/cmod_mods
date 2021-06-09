@@ -282,7 +282,8 @@ class LLAMA_tomography():
         # self.hfs_max = self.R_tg[:self.nch_hfs].max()
        
         self.nr = 50
-        self.R_grid = np.linspace(self.lfs_min-.01,self.lfs_max+.01,self.nr)
+        #self.R_grid = np.linspace(self.lfs_min-.01,self.lfs_max+.01,self.nr)
+        self.R_grid = np.linspace(self.lfs_min,self.lfs_max,self.nr)
         # self.R_grid = np.hstack((np.linspace(self.hfs_min-.01,self.hfs_max+.05,self.nr),
         #                          np.linspace(self.lfs_min-.01,self.lfs_max+.02,self.nr)))
         
